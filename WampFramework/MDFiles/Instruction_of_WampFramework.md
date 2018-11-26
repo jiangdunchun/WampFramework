@@ -13,22 +13,23 @@ Here is a [website](https://wamp-proto.org) introducing the theory of **Wamp**. 
 This framework supports two message modes of websocket: **String Mode** and **Byte[] Mode**. Both these two mode have the same contents. Before introducing the structure of message, it's essential to know what these items mean.
 
 **Protocol Head**: several numbers are defined to present different means of this message. This chart explains which mean each number represents:
-| Number| Mean|
-| :----: | :----: |
-| 0 | Remote call |
-| 8 | Feedback of successful remote call |
-| 9 | Feedback of failed remote call |
-| 10 | Remote subscribe |
-| 11 | Subscribed event invoked |
-| 18 | Feedback of successful remote subscribe |
-| 19 | Feedback of failed remote subscribe |
-| 20 | Remote unsubscribe |
-| 28 | Feedback of successful remote unsubscribe |
-| 29 | Feedback of failed remote unsubscribe |
-| 30 | Remote register |
-| 38 | Feedback of successful remote register |
-| 39 | Feedback of failed remote register |
-| 101 | An error happened |
+
+ Number| Mean
+ :----: | :----: 
+ 0 | Remote call 
+ 8 | Feedback of successful remote call 
+ 9 | Feedback of failed remote call 
+ 10 | Remote subscribe 
+ 11 | Subscribed event invoked 
+ 18 | Feedback of successful remote subscribe 
+ 19 | Feedback of failed remote subscribe 
+ 20 | Remote unsubscribe 
+ 28 | Feedback of successful remote unsubscribe 
+ 29 | Feedback of failed remote unsubscribe 
+ 30 | Remote register 
+ 38 | Feedback of successful remote register 
+ 39 | Feedback of failed remote register 
+ 101 | An error happened 
 
 **ID**: No matter calling a method or subscribing a event, the Wamp slaves need to generate a unique ID, and send it to Wamp master. After that, the master will send it back to slave in the feedback message of this calling or subscribing. This ID make sure that all message could be send back to the place where it came from.
 
@@ -40,36 +41,41 @@ This framework supports two message modes of websocket: **String Mode** and **By
 
 ###String Mode
 Every item of message is split by `','`. This chart explain the content of string mode message(`*`represents this item is not essential) 
-| Index| Content |
-| :----: | :----: |
-| 0 | Protocol Head |
-| 1 | ID |
-| 2 | Class Name |
-| 3 | Method(Event) Name |
-| 4`*` | Argument_1 |
-| 5`*` | Argument_2 |
-| ... | ... |
+
+Index| Content 
+:----: | :----: 
+0 | Protocol Head 
+1 | ID 
+2 | Class Name 
+3 | Method(Event) Name 
+4`*` | Argument_1 
+5`*` | Argument_2 
+... | ... 
 
 ###Byte[] Mode
 Every part of message has length limit for itself. This chart explain the content of byte[] mode message(`*`represents this item is not essential). 
-| Index| Content | Type| Length |
-| :----: | :----: | :----: | :----: |
-| 0 | Protocol Head | byte | 1 |
-| 1 | ID | UInt16 | 2 |
-| 2 | Class Name,Method(Event) Name | byte+string| 1+n |
-| 3`*` | Argument_1 | byte+int | 1+4 |
-| 4`*` | Argument_2 | byte+double | 1+8 |
-| 5`*` | Argument_3 | byte+byte+string | 1+1+n |
-| 6`*` | Argument_4 | byte+byte+byte[] | 1+1+n |
-| ... | ... | ... | ... |
+
+ Index| Content | Type| Length 
+ :----: | :----: | :----: | :----: 
+ 0 | Protocol Head | byte | 1 
+ 1 | ID | UInt16 | 2 
+ 2 | Class Name,Method(Event) Name | byte+string| 1+n 
+ 3`*` | Argument_1 | byte+int | 1+4 |
+ 4`*` | Argument_2 | byte+double | 1+8 
+ 5`*` | Argument_3 | byte+byte+string | 1+1+n 
+ 6`*` | Argument_4 | byte+byte+byte[] | 1+1+n 
+ ... | ... | ... | ... 
+
 It might look a little strange of the **Type** and **Length** in **Index 2**. Actually, **Index 2** stores the Class Name and Method(Event) Name together, and splits them using a `','`, because these two items are both string type. Another consideration is we need a byte to presents the length of this combine string's length. So, the **Type** of **Index 2** is `byte+string`, and the **Length** of **Index 2** is `1+n`,  the number of front byte is combine string's length.
 Another point need to notice is the **Type** and **Length** of **Argument_n**. I explain it in more details because it's a bit of complicated. Different types of arguments have different length when they transfer to `byte[]`, so, we need to label which type this argument is. Several numbers are defined to present different argument types. This chart explains each type's number(in order to contain majority of types in c#, I define the argument types like `byte`  `UInt16` are both `int`, and `float` is also `double`)
-| Number| Type|
-| :----: | :----: |
-| 0 | string |
-| 1 | byte[] |
-| 4 | int |
-| 8 | double |
+
+ Number| Type 
+ :----: | :----: 
+ 0 | string 
+ 1 | byte[] 
+ 4 | int 
+ 8 | double 
+
 From what has been discussed above, it's clear why the **Type** of **Index 3**(**Index 4**) is `byte+int(double)`, and the **Length** of **Index 3**(**Index 4**) is `1+4(8)`. Number of front byte presents this argument's type, and the next `4`(`8`) bytes presents the real argument. 
 But we still have a problem in how to know this item's length when it transfers to `byte[]` if its type is `string` or `byte[]`. We use the same way to **Index 2**, inserting a new byte to present the length. As a result, the **Type** of **Index 5**(**Index 6**) is `byte+byte+string(byte[])`, and the **Length** of **Index 5**(**Index 6**) is `1+1+n`. Number of front byte presents this argument's type, the next byte presents the length, and the last `n` bytes presents the real argument. 
 
