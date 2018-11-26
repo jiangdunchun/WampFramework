@@ -1,8 +1,8 @@
-WampSharp
+WampFramework
 ==============
 
 # Introduction
-[Wamp](https://wamp-proto.org/why/index.html#top) library in c sharp.
+A lightweight framework allows remote calls of methods and subscription of events in local c# assemblys
 
 # Platform
 All projects in VS2017 X64 platform, you may need to reset
