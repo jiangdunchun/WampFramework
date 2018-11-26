@@ -12,7 +12,7 @@ Here is a [website](https://wamp-proto.org) introducing the theory of **Wamp**. 
 >* The asynchronous invoking is also supported. In other words, even though one method invoked by remote command in your assembly needs a long time to process, the later remote command will not be blocked
 
 ## Protocol Standard
-This framework supports two message modes of websocket: **String Mode** and **Byte[] Mode**. Both these two mode have the same contents. Before introducing the structure of message, it's essential to know what these items mean.
+This framework supports two message modes of websocket: **String Mode** and **Byte[] Mode**. Both these two modes have the same contents. Before introducing the structure of message, it's essential to know what these items mean.
 
 **Protocol Head**: several numbers are defined to present different means of this message. This chart explains which mean each number represents:
 
@@ -44,7 +44,7 @@ This framework supports two message modes of websocket: **String Mode** and **By
 
 ### String Mode
 
-Every item of message is split by `','`. This chart explain the content of string mode message(`*`represents this item is not essential) 
+Every item of message is split by `','`. This chart explains the content of string mode message(`*`represents this item is not essential) 
 
 Index| Content 
 :----: | :----: 
@@ -59,7 +59,7 @@ Index| Content
 
 ### Byte[] Mode
 
-Every part of message has length limit for itself. This chart explain the content of byte[] mode message(`*`represents this item is not essential). 
+Every part of message has length limit for itself. This chart explains the content of byte[] mode message(`*`represents this item is not essential). 
 
  Index| Content | Type| Length 
  :----: | :----: | :----: | :----: 
