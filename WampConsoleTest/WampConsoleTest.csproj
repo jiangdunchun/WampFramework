@@ -49,7 +49,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LocalAssemble\LocalAssembly.csproj">
+    <ProjectReference Include="..\LocalAssembly\LocalAssembly.csproj">
       <Project>{1e0acfad-7b07-46e2-ac37-1204c85a6006}</Project>
       <Name>LocalAssembly</Name>
     </ProjectReference>
