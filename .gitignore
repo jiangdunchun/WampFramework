@@ -1,0 +1,17 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/LocalAssemble/obj/Debug
+/WampConsoleTest/obj/Debug
+/.vs/WampFramework/v15
+/WampFramework/obj
+/bin/Debug/WampSharp.pdb
+/bin/Debug/WampSharp.dll
+/bin/Debug/WampFramework.pdb
+/bin/Debug/WampFramework.dll
+/bin/Debug/WampConsoleTest.pdb
+/bin/Debug/WampConsoleTest.exe.config
+/bin/Debug/WampConsoleTest.exe
+/bin/Debug/LocalAssemble.pdb
+/bin/Debug/LocalAssemble.dll
