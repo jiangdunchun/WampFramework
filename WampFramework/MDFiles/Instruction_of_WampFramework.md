@@ -39,7 +39,9 @@ This framework supports two message modes of websocket: **String Mode** and **By
 
 **Argument_n**: Wamp message will have this item in 3 occasions. Firstly, the slave should send the arguments when remotely call a method, if this method needs. Secondly, the master would send a argument back in the feedback of a remote call, if this method has return value. Finally, the master would send arguments back when a subscribed event invoked , if this event delivers parameters out. 
 
+
 ###String Mode
+
 Every item of message is split by `','`. This chart explain the content of string mode message(`*`represents this item is not essential) 
 
 Index| Content 
@@ -52,7 +54,9 @@ Index| Content
 5`*` | Argument_2 
 ... | ... 
 
+
 ###Byte[] Mode
+
 Every part of message has length limit for itself. This chart explain the content of byte[] mode message(`*`represents this item is not essential). 
 
  Index| Content | Type| Length 
@@ -67,6 +71,7 @@ Every part of message has length limit for itself. This chart explain the conten
  ... | ... | ... | ... 
 
 It might look a little strange of the **Type** and **Length** in **Index 2**. Actually, **Index 2** stores the Class Name and Method(Event) Name together, and splits them using a `','`, because these two items are both string type. Another consideration is we need a byte to presents the length of this combine string's length. So, the **Type** of **Index 2** is `byte+string`, and the **Length** of **Index 2** is `1+n`,  the number of front byte is combine string's length.
+
 Another point need to notice is the **Type** and **Length** of **Argument_n**. I explain it in more details because it's a bit of complicated. Different types of arguments have different length when they transfer to `byte[]`, so, we need to label which type this argument is. Several numbers are defined to present different argument types. This chart explains each type's number(in order to contain majority of types in c#, I define the argument types like `byte`  `UInt16` are both `int`, and `float` is also `double`)
 
  Number| Type 
@@ -77,6 +82,7 @@ Another point need to notice is the **Type** and **Length** of **Argument_n**. I
  8 | double 
 
 From what has been discussed above, it's clear why the **Type** of **Index 3**(**Index 4**) is `byte+int(double)`, and the **Length** of **Index 3**(**Index 4**) is `1+4(8)`. Number of front byte presents this argument's type, and the next `4`(`8`) bytes presents the real argument. 
+
 But we still have a problem in how to know this item's length when it transfers to `byte[]` if its type is `string` or `byte[]`. We use the same way to **Index 2**, inserting a new byte to present the length. As a result, the **Type** of **Index 5**(**Index 6**) is `byte+byte+string(byte[])`, and the **Length** of **Index 5**(**Index 6**) is `1+1+n`. Number of front byte presents this argument's type, the next byte presents the length, and the last `n` bytes presents the real argument. 
 
 
