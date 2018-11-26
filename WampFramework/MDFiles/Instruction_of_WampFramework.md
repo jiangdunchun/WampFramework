@@ -1,4 +1,4 @@
-﻿# Welcome to use WampSharp Framework
+﻿# Welcome to WampFramework
 -------
 Author: [Dunchun Jiang](jiangdunchun@outlook.com)
 Version: 1.0

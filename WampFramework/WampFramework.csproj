@@ -84,7 +84,7 @@
     <Compile Include="Router\WampRouter.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="MDFiles\Instruction_of_WampSharp.md" />
+    <None Include="MDFiles\Instruction_of_WampFramework.md" />
     <Content Include="JSFiles\WampCommon.js" />
     <Content Include="JSFiles\WampClassTest.js" />
     <Content Include="JSFiles\WampConfig.js" />
