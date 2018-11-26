@@ -6,7 +6,7 @@ Version: 1.0
 
 Date: 26/11/2018
 
-Here is a [website](https://wamp-proto.org) introducing the theory of **Wamp**. But, actually, I modify some technical details in order to adapt to the demand of invoking local c# assembly.In summary, this framework could do these:
+Here is a [website](https://wamp-proto.org) introducing the theory of **Wamp**. But, actually, I modify some technical details in order to adapt to the demand of invoking local c# assembly. In summary, this framework could do these:
 >* Open the API of c# assembly to websocket connection in a simple and quick way, even though you don't have a clear conscious about how to organize the router
 >* Export all c# API to js file, as a result, the front_end could invoke these API just by referencing these files
 >* The asynchronous invoking is also supported. In other words, even though one method invoked by remote command in your assembly needs a long time to process, the later remote command will not be blocked
