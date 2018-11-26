@@ -40,7 +40,7 @@ This framework supports two message modes of websocket: **String Mode** and **By
 **Argument_n**: Wamp message will have this item in 3 occasions. Firstly, the slave should send the arguments when remotely call a method, if this method needs. Secondly, the master would send a argument back in the feedback of a remote call, if this method has return value. Finally, the master would send arguments back when a subscribed event invoked , if this event delivers parameters out. 
 
 
-###String Mode
+### String Mode
 
 Every item of message is split by `','`. This chart explain the content of string mode message(`*`represents this item is not essential) 
 
@@ -55,7 +55,7 @@ Index| Content
 ... | ... 
 
 
-###Byte[] Mode
+### Byte[] Mode
 
 Every part of message has length limit for itself. This chart explain the content of byte[] mode message(`*`represents this item is not essential). 
 
