@@ -34,22 +34,22 @@ namespace WampFramework.Router
                 // if entity is existing
                 if (CalleeDic.ContainsKey(data.Entity))
                 {
+                    // add the id and socket in method pool
+                    _methods.Add(data.ID, socket);
+
                     // call the method, and if proccess was success
                     Tuple<bool, object> call_back = CalleeDic[data.Entity].Call(data.Name, args.ToArray());
 
                     if (call_back.Item1)
                     {
-                        // add the id and socket in method pool
-                        _methods.Add(data.ID, socket);
-
                         ret_msg.Construct(WampProtocolHead.CAL_SUC, data.ID, data.Entity, data.Name, new object[] { call_back.Item2 });
                         ret_msg.Send(socket);
-
-                        // remove the id and socket from method pool
-                        _methods.Remove(data.ID);
-
-                        return;
                     }
+
+                    // remove the id and socket from method pool
+                    _methods.Remove(data.ID);
+
+                    return;
                 }
             }
 
@@ -72,24 +72,24 @@ namespace WampFramework.Router
                 // if entity is existing
                 if (CalleeDic.ContainsKey(data.Entity))
                 {
+                    // add the id and socket in method pool
+                    _methods.Add(data.ID, socket);
+
                     // call the method, and if proccess was success
-                    Task <Tuple< bool, object>> call_task = CalleeDic[data.Entity].CallAsync(data.Name, args.ToArray());
+                    Task<Tuple<bool, object>> call_task = CalleeDic[data.Entity].CallAsync(data.Name, args.ToArray());
                     call_task.Start();
                     Tuple<bool, object> call_ret = await call_task;
 
                     if (call_ret.Item1)
                     {
-                        // add the id and socket in method pool
-                        _methods.Add(data.ID, socket);
-
                         ret_msg.Construct(WampProtocolHead.CAL_SUC, data.ID, data.Entity, data.Name, new object[] { call_ret.Item2 });
                         ret_msg.Send(socket);
-
-                        // remove the id and socket from method pool
-                        _methods.Remove(data.ID);
-
-                        return;
                     }
+
+                    // remove the id and socket from method pool
+                    _methods.Remove(data.ID);
+
+                    return;
                 }
             }
 
