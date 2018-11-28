@@ -44,7 +44,7 @@ This framework supports two message modes of websocket: **String Mode** and **By
 
 ### String Mode
 
-Every item of message is split by `','`. This chart explains the content of string mode message(`*`represents this item is not essential) 
+Every item of message is split by `','`. This chart explains the content of **string mode** message(`*`represents this item is not essential) 
 
 Index| Content 
 :----: | :----: 
@@ -59,7 +59,7 @@ Index| Content
 
 ### Byte[] Mode
 
-Every part of message has length limit for itself. This chart explains the content of byte[] mode message(`*`represents this item is not essential). 
+Every part of message has length limit for itself. This chart explains the content of **byte[] mode** message(`*`represents this item is not essential). 
 
  Index| Content | Type| Length 
  :----: | :----: | :----: | :----: 
@@ -72,7 +72,7 @@ Every part of message has length limit for itself. This chart explains the conte
  6`*` | Argument_4 | byte+int+byte[] | 1+4+n 
  ... | ... | ... | ... 
 
-It might look a little strange of the **Type** and **Length** in **Index 2**. Actually, **Index 2** stores the Class Name and Method(Event) Name together, and splits them using a `','`, because these two items are both string type. Another consideration is we need a byte to presents the length of this combine string's length. Also for this reason, the length of `byte[]` transfered from this combine string must less than 255. So, the **Type** of **Index 2** is `byte+string`, and the **Length** of **Index 2** is `1+n`,  the number of front byte is combine string's length.
+It might look a little strange of the **Type** and **Length** in **Index 2**. Actually, **Index 2** stores the Class Name and Method(Event) Name together, and splits them using a `','`, because these two items are both `string` type. Another consideration is we need a `byte` to presents the length of this combine string's length. Also for this reason, the length of `byte[]` transfered from this combine string must less than 255. So, the **Type** of **Index 2** is `byte+string`, and the **Length** of **Index 2** is `1+n`,  the number of front `byte` is combine string's length.
 
 Another point need to be noticed is the **Type** and **Length** of **Argument_n**. I explain it in more details because it's a bit of complicated. Different types of arguments have different length when they transfer to `byte[]`, so, we need to label which type this argument is. Several numbers are defined to present different argument types. This chart explains each type's number(in order to contain majority of types in c#, I define the argument types like `byte`  `UInt16` are both `int`, and `float` is also `double`)
 
@@ -86,7 +86,7 @@ Another point need to be noticed is the **Type** and **Length** of **Argument_n*
 
 From what has been discussed above, it's clear why the **Type** of **Index 3**(**Index 4**) is `byte+int(double)`, and the **Length** of **Index 3**(**Index 4**) is `1+4(8)`. Number of front byte presents this argument's type, and the next `4`(`8`) bytes presents the real argument. 
 
-But we still have a problem in how to know this item's length when it transfers to `byte[]` if its type is `string` or `byte[]`. We use the same way to **Index 2**, inserting a new `int` to present the length. The reason of using an `int` to label the length rather than a `byte`, is the argument might be pixel value of a texture sometimes. As a result, the **Type** of **Index 5**(**Index 6**) is `byte+int+string(byte[])`, and the **Length** of **Index 5**(**Index 6**) is `1+4+n`. Number of front byte presents this argument's type, the next int presents the length, and the last `n` bytes presents the real argument. 
+But we still have a problem in how to know this item's length when it transfers to `byte[]` if its type is `string` or `byte[]`. We use the same way to **Index 2**, inserting a new `int` to present the length. The reason of using an `int` to label the length rather than a `byte`, is the argument might be pixel value of a texture sometimes. As a result, the **Type** of **Index 5**(**Index 6**) is `byte+int+string(byte[])`, and the **Length** of **Index 5**(**Index 6**) is `1+4+n`. Number of front `byte` presents this argument's type, the next `int` presents the length, and the last `n` bytes presents the real argument. 
 
 
 
