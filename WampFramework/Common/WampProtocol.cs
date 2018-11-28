@@ -32,8 +32,9 @@ namespace WampFramework.Common
 
     enum WampArgType : byte
     {
-        STRING = 0,
-        BYTES = 1,
+        NULL = 0,
+        STRING = 1,
+        BYTES = 2,
         INT = 4,
         DOUBLE = 8
     }
@@ -47,18 +48,19 @@ namespace WampFramework.Common
      * 
      * byte message foramte
      * received message: WampProtocol|ID     |ClassName,MethodorEventName(|arg1           |arg2           |arg3                     )
-     * data type:        byte        |UInt16 |byte+string                (|byte+int       |byte+double    |byte+byte+string         )
+     * data type:        byte        |UInt16 |byte+string                (|byte+int       |byte+double    |byte+int+string         )
      * data description: WampProtocol|ID     |namelength+namebyte        (|argtype+argbyte|argtype+argbyte|argtype+arglength+argbyte)
-     * byte length:      1           |2      |1+n                        (|1+4            |1+8            |1+1+n                    )
+     * byte length:      1           |2      |1+n                        (|1+4            |1+8            |1+4+n                    )
      * 
      * send message:     WampProtocol|ID     |ClassName,MethodorEventName(|arg1           |arg2           |arg3                     )
-     * data type:        byte        |UInt16 |byte+string                (|byte+int       |byte+double    |byte+byte+string         )
+     * data type:        byte        |UInt16 |byte+string                (|byte+int       |byte+double    |byte+int+string         )
      * data description: WampProtocol|ID     |namelength+namebyte        (|argtype+argbyte|argtype+argbyte|argtype+arglength+argbyte)
-     * byte length:      1           |2      |1+n                        (|1+4            |1+8            |1+1+n                    )
+     * byte length:      1           |2      |1+n                        (|1+4            |1+8            |1+4+n                    )
     */
     class WampMessage
     {
-        private readonly int MAX_LENGTH = 65536;
+        private readonly byte MAX_NAME_LENGTH = 255;
+        private readonly int MAX_ARG_LENGTH = 2147483647;
         private readonly char[] SPLIT_CHARS = { ',', '|' };
 
         private WampProtocolHead _protocol;
@@ -114,13 +116,13 @@ namespace WampFramework.Common
                 ret_byte.AddRange(id_bs);
             }
 
-            // entity and name, "_entity,_name", length is 1+n, 1 is n's length
+            // entity and name, "_entity,_name", length is 1+n, 1 is n's length(less than 255)
             byte[] name_bs;
             if (WampValueHelper.ParseBytes(string.Format("{0},{1}", _entity, _name), out name_bs))
             {
-                if (name_bs.Length >= MAX_LENGTH)
+                if (name_bs.Length >= MAX_NAME_LENGTH)
                 {
-                    string e_str = string.Format("the length of the name(type is string) is more than {0}", MAX_LENGTH);
+                    string e_str = string.Format("the length of the name(type is string) is more than {0}", MAX_NAME_LENGTH);
 
                     //if (WampAttributes.Logger != null)
                     //{
@@ -139,17 +141,48 @@ namespace WampFramework.Common
             {
                 foreach (object arg in _args)
                 {
-                    byte[] arg_bs;
-                    Type arg_type = arg.GetType();
-
-                    // string or char type, length is 1+1+n, 1 is arg type, 1 is arg length, n is string's length(less than 65536)
-                    if (arg_type == typeof(string) || arg_type == typeof(char))
+                    if (arg == null)
                     {
-                        if (WampValueHelper.ParseBytes((string)arg, out arg_bs))
+                        ret_byte.Add((byte)(WampArgType.NULL));
+                    }
+                    else
+                    {
+                        byte[] arg_bs;
+                        Type arg_type = arg.GetType();
+
+                        // string or char type, length is 1+4+n, 1 is arg type, 4 is arg length, n is string's length(less than 2147483647)
+                        if (arg_type == typeof(string) || arg_type == typeof(char))
                         {
-                            if (arg_bs.Length >= MAX_LENGTH)
+                            if (WampValueHelper.ParseBytes((string)arg, out arg_bs))
                             {
-                                string e_str = string.Format("the length of an arg(type is string) is more than {0}", MAX_LENGTH);
+                                if (arg_bs.Length >= MAX_ARG_LENGTH)
+                                {
+                                    string e_str = string.Format("the length of an arg(type is string) is more than {0}", MAX_ARG_LENGTH);
+
+                                    //if (WampAttributes.Logger != null)
+                                    //{
+                                    //    WampAttributes.Logger.Log(e_str);
+                                    //}
+
+                                    WampMessageException wm_e = new WampMessageException(e_str);
+                                    throw wm_e;
+                                }
+
+                                ret_byte.Add((byte)(WampArgType.STRING));
+                                byte[] arg_length;
+                                WampValueHelper.ParseBytes(arg_bs.Length, out arg_length);
+                                ret_byte.AddRange(arg_length);
+                                ret_byte.AddRange(arg_bs);
+                            }
+                        }
+                        // bytes type, length is 1+4+n, 1 is arg type, 4 is arg length, n is byte[]'s length(less than 2147483647)
+                        else if (arg_type == typeof(byte[]))
+                        {
+                            arg_bs = (byte[])arg;
+
+                            if (arg_bs.Length >= MAX_ARG_LENGTH)
+                            {
+                                string e_str = string.Format("the length of an arg(type is byte[]) is more than {0}", MAX_ARG_LENGTH);
 
                                 //if (WampAttributes.Logger != null)
                                 //{
@@ -160,49 +193,29 @@ namespace WampFramework.Common
                                 throw wm_e;
                             }
 
-                            ret_byte.Add((byte)(WampArgType.STRING));
-                            ret_byte.Add((byte)(arg_bs.Length));
+                            ret_byte.Add((byte)(WampArgType.BYTES));
+                            byte[] arg_length;
+                            WampValueHelper.ParseBytes(arg_bs.Length, out arg_length);
+                            ret_byte.AddRange(arg_length);
                             ret_byte.AddRange(arg_bs);
                         }
-                    }
-                    // bytes type, length is 1+1+n, 1 is arg type, 1 is arg length, n is byte[]'s length(less than 65536)
-                    else if (arg_type == typeof(byte[]))
-                    {
-                        arg_bs = (byte[])arg;
-
-                        if (arg_bs.Length >= MAX_LENGTH)
+                        // float and double type, length is 1+8, 1 is arg type, 8 is double's length
+                        else if (arg_type == typeof(float) || arg_type == typeof(double))
                         {
-                            string e_str = string.Format("the length of an arg(type is byte[]) is more than {0}", MAX_LENGTH);
-
-                            //if (WampAttributes.Logger != null)
-                            //{
-                            //    WampAttributes.Logger.Log(e_str);
-                            //}
-
-                            WampMessageException wm_e = new WampMessageException(e_str);
-                            throw wm_e;
+                            if (WampValueHelper.ParseBytes((double)arg, out arg_bs))
+                            {
+                                ret_byte.Add((byte)(WampArgType.DOUBLE));
+                                ret_byte.AddRange(arg_bs);
+                            }
                         }
-
-                        ret_byte.Add((byte)(WampArgType.BYTES));
-                        ret_byte.Add((byte)(arg_bs.Length));
-                        ret_byte.AddRange(arg_bs);
-                    }
-                    // float and double type, length is 1+8, 1 is arg type, 8 is double's length
-                    else if (arg_type == typeof(float) || arg_type == typeof(double))
-                    {
-                        if (WampValueHelper.ParseBytes((double)arg, out arg_bs))
+                        // int type, length is 1+4, 1 is arg type, 4 is int's length
+                        else if (arg_type == typeof(int))
                         {
-                            ret_byte.Add((byte)(WampArgType.DOUBLE));
-                            ret_byte.AddRange(arg_bs);
-                        }
-                    }
-                    // int type, length is 1+4, 1 is arg type, 4 is int's length
-                    else if (arg_type == typeof(int))
-                    {
-                        if (WampValueHelper.ParseBytes((int)arg, out arg_bs))
-                        {
-                            ret_byte.Add((byte)(WampArgType.INT));
-                            ret_byte.AddRange(arg_bs);
+                            if (WampValueHelper.ParseBytes((int)arg, out arg_bs))
+                            {
+                                ret_byte.Add((byte)(WampArgType.INT));
+                                ret_byte.AddRange(arg_bs);
+                            }
                         }
                     }
                 }
@@ -214,7 +227,7 @@ namespace WampFramework.Common
         {
             if (msg_bs == null || msg_bs.Count == 0) return true;
 
-            switch((WampArgType)msg_bs[0])
+            switch ((WampArgType)msg_bs[0])
             {
                 case WampArgType.STRING:
                     string s = string.Empty;
@@ -354,7 +367,7 @@ namespace WampFramework.Common
             // log, when send a message back
             if (WampSetting.Logger != null)
             {
-                string log_str = string.Format("Send a message from {0}:{1}, is {2}", 
+                string log_str = string.Format("Send a message from {0}:{1}, is {2}",
                     socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort, this.ToString());
                 WampSetting.Logger.Log(log_str);
             }
@@ -377,7 +390,7 @@ namespace WampFramework.Common
             // log, when send an erro message back
             if (WampSetting.Logger != null)
             {
-                string log_str = string.Format("Send an erro message from {0}:{1}, is {2},{3}", 
+                string log_str = string.Format("Send an erro message from {0}:{1}, is {2},{3}",
                     socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort, (byte)WampProtocolHead.ERROR, message);
                 WampSetting.Logger.Log(log_str);
             }
