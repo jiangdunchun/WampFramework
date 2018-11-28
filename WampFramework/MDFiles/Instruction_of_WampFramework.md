@@ -86,7 +86,7 @@ Another point need to be noticed is the **Type** and **Length** of **Argument_n*
 
 From what has been discussed above, it's clear why the **Type** of **Index 3**(**Index 4**) is `byte+int(double)`, and the **Length** of **Index 3**(**Index 4**) is `1+4(8)`. Number of front byte presents this argument's type, and the next `4`(`8`) bytes presents the real argument. 
 
-But we still have a problem in how to know this item's length when it transfers to `byte[]` if its type is `string` or `byte[]`. We use the same way to **Index 2**, inserting a new `int` to present the length. The reason of using an `int` to label the length rather than a `byte`, is the argument might be pixel value of a texture sometimes. As a result, the **Type** of **Index 5**(**Index 6**) is `byte+byte+string(byte[])`, and the **Length** of **Index 5**(**Index 6**) is `1+1+n`. Number of front byte presents this argument's type, the next byte presents the length, and the last `n` bytes presents the real argument. 
+But we still have a problem in how to know this item's length when it transfers to `byte[]` if its type is `string` or `byte[]`. We use the same way to **Index 2**, inserting a new `int` to present the length. The reason of using an `int` to label the length rather than a `byte`, is the argument might be pixel value of a texture sometimes. As a result, the **Type** of **Index 5**(**Index 6**) is `byte+int+string(byte[])`, and the **Length** of **Index 5**(**Index 6**) is `1+4+n`. Number of front byte presents this argument's type, the next int presents the length, and the last `n` bytes presents the real argument. 
 
 
 
