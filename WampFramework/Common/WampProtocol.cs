@@ -231,18 +231,30 @@ namespace WampFramework.Common
             {
                 case WampArgType.STRING:
                     string s = string.Empty;
-                    byte[] s_bs = new byte[msg_bs[1]];
-                    msg_bs.CopyTo(2, s_bs, 0, msg_bs[1]);
-                    msg_bs.RemoveRange(0, msg_bs[1] + 2);
-                    WampValueHelper.ParseString(s_bs, out s);
-                    args.Add(s);
+                    byte[] s_len_bs = new byte[4];
+                    msg_bs.CopyTo(1, s_len_bs, 0, 4);
+                    int args_len;
+                    if (WampValueHelper.ParseInt(s_len_bs, out args_len))
+                    {
+                        byte[] s_bs = new byte[args_len];
+                        msg_bs.CopyTo(5, s_bs, 0, args_len);
+                        msg_bs.RemoveRange(0, args_len + 5);
+                        WampValueHelper.ParseString(s_bs, out s);
+                        args.Add(s);
+                    }
                     break;
                 case WampArgType.BYTES:
                     // @ to do, might have some trouble in the byte[] type arg
-                    byte[] bs_bs = new byte[msg_bs[1]];
-                    msg_bs.CopyTo(2, bs_bs, 0, msg_bs[1]);
-                    msg_bs.RemoveRange(0, msg_bs[1] + 2);
-                    args.Add(bs_bs.ToString());
+                    byte[] b_len_bs = new byte[4];
+                    msg_bs.CopyTo(1, b_len_bs, 0, 4);
+                    int argb_len;
+                    if (WampValueHelper.ParseInt(b_len_bs, out argb_len))
+                    {
+                        byte[] bs_bs = new byte[argb_len];
+                        msg_bs.CopyTo(5, bs_bs, 0, argb_len);
+                        msg_bs.RemoveRange(0, argb_len + 5);
+                        args.Add(bs_bs.ToString());
+                    }
                     break;
                 case WampArgType.INT:
                     int i = 0;
