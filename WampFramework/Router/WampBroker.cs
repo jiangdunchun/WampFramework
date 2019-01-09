@@ -19,10 +19,11 @@ namespace WampFramework.Router
             public string Event;
         }
 
-        private Dictionary<SubeventInfo, Dictionary<UInt16, IWebSocketConnection>> _events = new Dictionary<SubeventInfo, Dictionary<UInt16, IWebSocketConnection>>();
+        internal static readonly WampBroker Instance = new WampBroker();
+
+        private Dictionary<SubeventInfo, Dictionary<ushort, IWebSocketConnection>> _events = new Dictionary<SubeventInfo, Dictionary<UInt16, IWebSocketConnection>>();
 
         internal Dictionary<string, IWampPublisher> PublisherDic = new Dictionary<string, IWampPublisher>();
-        internal static readonly WampBroker Instance = new WampBroker();
 
         internal void EventInvoked(string pubName, string eventName, object[] args)
         {
@@ -36,7 +37,7 @@ namespace WampFramework.Router
 
             if (!_events.ContainsKey(e_inf)) return;
 
-            foreach(UInt16 id in _events[e_inf].Keys)
+            foreach (ushort id in _events[e_inf].Keys)
             {
                 ret_msg.Construct(WampProtocolHead.SBS_BCK, id, e_inf.Entity, e_inf.Event, args);
                 ret_msg.Send(_events[e_inf][id]);
@@ -44,7 +45,8 @@ namespace WampFramework.Router
         }
         internal void Subscribe(IWebSocketConnection socket, WampMessage data)
         {
-            SubeventInfo e_inf = new SubeventInfo() {
+            SubeventInfo e_inf = new SubeventInfo()
+            {
                 Entity = data.Entity,
                 Event = data.Name
             };
@@ -64,7 +66,7 @@ namespace WampFramework.Router
                         if (PublisherDic[data.Entity].Subscribe(data.Name))
                         {
                             // add new event type in event pool
-                            _events.Add(e_inf, new Dictionary<UInt16, IWebSocketConnection>());
+                            _events.Add(e_inf, new Dictionary<ushort, IWebSocketConnection>());
                         }
                         // if adding proccess was failed 
                         else
@@ -157,7 +159,7 @@ namespace WampFramework.Router
                         if (sub_ret)
                         {
                             // add new event type in event pool
-                            _events.Add(e_inf, new Dictionary<UInt16, IWebSocketConnection>());
+                            _events.Add(e_inf, new Dictionary<ushort, IWebSocketConnection>());
                         }
                         // if adding proccess was failed 
                         else
@@ -229,9 +231,9 @@ namespace WampFramework.Router
         }
         internal void RemoveSocket(IWebSocketConnection socket)
         {
-            foreach(SubeventInfo e_inf in _events.Keys)
+            foreach (SubeventInfo e_inf in _events.Keys)
             {
-                foreach (UInt16 id in _events[e_inf].Keys)
+                foreach (ushort id in _events[e_inf].Keys)
                 {
                     if (_events[e_inf][id] == socket)
                     {

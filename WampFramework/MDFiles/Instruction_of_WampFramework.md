@@ -1,5 +1,6 @@
 ﻿# Welcome to WampFramework
 -------
+
 Author: [Dunchun Jiang](jiangdunchun@outlook.com)
 
 Version: 1.0
@@ -16,7 +17,7 @@ This framework supports two communication modes of websocket: **String Mode** an
 
 **Protocol Head**: several numbers are defined to present different command type of this message. This chart explains which command type each number represents:
 
- Number| Command
+ Number | Command
  :----: | :----: 
  0 | Remote call 
  8 | Feedback of successful remote call 
@@ -44,7 +45,7 @@ This framework supports two communication modes of websocket: **String Mode** an
 
 ### String Mode
 
-Every item of message is split by `','`. This chart explains the items of **string mode** message(`*`represents this item is not essential) 
+Every item of message is split by `'|'`. This chart explains the items of **string mode** message(`*`represents this item is not essential) 
 
 Index| Item 
 :----: | :----: 
@@ -59,30 +60,37 @@ Index| Item
 
 ### Byte[] Mode
 
-Every part of message has length limitation for itself. This chart explains the items of **byte[] mode** message(`*`represents this item is not essential). 
+Every part of message has length limitation for itself. This chart explains the items of **byte[] mode** message(`*`represents this item is not essential)(`*****`represents this item will be explained latter). 
 
- Index| Item | Type| Length 
+ Index| Item | Structure| Length 
  :----: | :----: | :----: | :----: 
  0 | Protocol Head | byte | 1 
  1 | ID | UInt16 | 2 
- 2 | Class Name,Method(Event) Name | byte+string| 1+n 
- 3`*` | Argument_1 | byte+int | 1+4 |
- 4`*` | Argument_2 | byte+double | 1+8 
- 5`*` | Argument_3 | byte+int+string | 1+4+n 
- 6`*` | Argument_4 | byte+int+byte[] | 1+4+n 
+ 2 | Class Name and Method(Event) Name | byte+string| 1+n 
+ 3`*` | Argument_1 | `*****` | `*****` 
+ 4`*` | Argument_2 | `*****` | `*****`
  ... | ... | ... | ... 
 
-It might look a little strange of the **Type** and **Length** in **Index 2**. Actually, **Index 2** stores the Class Name and Method(Event) Name together, and splits them using a `','`, because these two items are both `string` type. Another consideration is we need a `byte` to illustrates the length of this compound string's length. Also for this reason, the length of `byte[]` converted from this compound string must less than 255. So, the **Type** of **Index 2** is `byte+string`, and the **Length** of **Index 2** is `1+n`,  the number of front `byte` is compound string's length.
+It might look a little strange of the **Type** and **Length** in **Index 2**. Actually, **Index 2** stores the Class Name and Method(Event) Name together, and splits them using a `'|'`, because these two items are both `string` type. Another consideration is we need a `byte` to illustrates the length of this compound string's length. Also for this reason, the length of `byte[]` converted from this compound string must less than 255. So, the **Type** of **Index 2** is `byte+string`, and the **Length** of **Index 2** is `1+n`,  the number of front `byte` is compound string's length.
 
-Another point need to be noticed is the **Type** and **Length** of **Argument_n**. I explain it in more details because it's a bit of complicated. Different types of arguments have different length when they were converted to `byte[]`, so, we need to label which type this argument is. Several numbers are defined to present different argument types. This chart explains each type's number(in order to include majority of types in c#, I define the argument types like `byte`  `UInt16` are both `int`, and `float` is also `double`)
+Another point need to be noticed is the **Type** and **Length** of **Argument_n**. I explain it in more details because it's a bit of complicated. Different types of arguments have different length when they were converted to `byte[]`, so, we need to label which type this argument is. Several numbers(Byte) are defined to present different argument types. This chart explains each type's number.
 
- Number| Type 
- :----: | :----: 
- 0 | null
- 1 | string 
- 2 | byte[] 
- 4 | int 
- 8 | double 
+ Type | Structure | Length | Content
+ :----: | :----: | :----: | :----:
+  null | byte | 1 | "0"
+  string | byte+int+string | 1+4+n | "1"+"string.length"+"string.content"
+  byte | byte+byte | 1+1 | "2"+"byte.content"
+  bool | byte+byte | 1+1 | "3"+"bool.content"
+  int |  byte+int| 1+4 | "4"+"int.content"
+  float |  byte+float| 1+4 | "5"+"float.content"
+  double |  byte+double | 1+8 | "6"+"float.content"
+  string[] | byte+int+int+string+... |  1+4+{(4+n1)+...} | "11"+"array.length"+"s1.length"+"s1.content"+...
+  byte[] | byte+int+byte+... | 1+4+{1+...} | "12"+"array.length"+"b1.content"+...
+  bool[] | byte+int+bool+... | 1+4+{1+...} | "13"+"array.length"+"b1.content"+...
+ int[] | byte+int+int+... | 1+4+{4+...} | "14"+"array.length"+"i1.content"+...
+ float[] | byte+int+float+... | 1+4+{4+...} | "15"+"array.length"+"f1.content"+...
+ double[] | byte+int+double+... | 1+4+{8+...} | "16"+"array.length"+"d1.content"+...
+ json | byte+int+json+... |  1+4+n | "255"+"json.length"+"json.content"
 
 From what has been discussed above, it's clear why the **Type** of **Index 3**(**Index 4**) is `byte+int(double)`, and the **Length** of **Index 3**(**Index 4**) is `1+4(8)`. Number of front byte presents this argument's type, and the next `4`(`8`) bytes store the real argument. 
 

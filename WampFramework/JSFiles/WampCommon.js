@@ -1,5 +1,5 @@
 ﻿/// this is the basic module of WAMP in javascript
-/// support by Dunchun Jiang<jiangdunchun@outlook.com>
+/// support by VRMaker<www.vrmaker.com.cn>
 
 const _wamp_socket = require('./WampConfig.js');
 
@@ -52,7 +52,7 @@ var __is_connected = function () {
     return _socket != null ? _socket.readyState === 1 : FAL;
 };
 
-// generate an unique id, the id needs to less than 65536 because it's format is Uint16
+// generate an unique id, the id needs to less than 65536 because it's format is ushort
 var __generate_id = function (isCall) {
     var id = Math.floor(Math.random() * 65536);
     if (isCall) {

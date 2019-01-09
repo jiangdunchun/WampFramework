@@ -6,11 +6,23 @@ using System.Threading.Tasks;
 using Fleck;
 using WampFramework.Common;
 using WampFramework.API;
+using WampFramework.Interfaces;
 
 namespace WampFramework.Router
 {
-    public class WampHost : IDisposable
+    public class WampFleckHost : IDisposable
     {
+        public WampFleckHost(string port)
+        {
+            WampProperties.Location = string.Format("ws://0.0.0.0:{0}", port);
+
+            WampRouter.Instance.Host = this;
+        }
+        ~WampFleckHost()
+        {
+            Dispose(false);
+        }
+
         private WebSocketServer _server = null;
 
         internal delegate void SocketEvent(IWebSocketConnection socket);
@@ -19,8 +31,14 @@ namespace WampFramework.Router
         internal event SocketEvent SocketBroken = null;
         internal event MessageEvent MessageReceived = null;
 
-        public string Location { get { return WampSetting.Location; } }
-        public bool IsOpen { get { return WampSetting.IsOpened; } }
+        /// <summary>
+        /// the server's location
+        /// </summary>
+        public string Location { get { return WampProperties.Location; } }
+        /// <summary>
+        /// whether the server is openning
+        /// </summary>
+        public bool IsOpen { get { return WampProperties.IsOpened; } }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -34,24 +52,16 @@ namespace WampFramework.Router
             }
         }
 
-        public WampHost(string port)
-        {
-            WampSetting.Location = string.Format("ws://0.0.0.0:{0}", port);
-
-            WampRouter.Instance.Host = this;
-        }
-        ~WampHost()
-        {
-            Dispose(false);
-        }
-
+        /// <summary>
+        /// Open a server host
+        /// </summary>
         public void Open()
         {
             Close();
 
             string log_str = string.Empty;
 
-            _server = new WebSocketServer(WampSetting.Location);
+            _server = new WebSocketServer(WampProperties.Location);
             try
             {
                 _server.Start(socket =>
@@ -74,7 +84,7 @@ namespace WampFramework.Router
                     };
                 });
 
-                WampSetting.IsOpened = true;
+                WampProperties.IsOpened = true;
 
                 log_str = string.Format("Start wamp server successfully in {0}", Location);
             }
@@ -89,11 +99,14 @@ namespace WampFramework.Router
             }
 
             // log, when the server started
-            if (WampSetting.Logger != null)
+            if (WampProperties.Logger != null)
             {
-                WampSetting.Logger.Log(log_str);
+                WampProperties.Logger.Log(log_str);
             }
         }
+        /// <summary>
+        /// close a server host
+        /// </summary>
         public void Close()
         {
             if (_server != null)
@@ -101,14 +114,17 @@ namespace WampFramework.Router
                 _server.Dispose();
 
                 // log, when the server closed
-                if (WampSetting.Logger != null)
+                if (WampProperties.Logger != null)
                 {
                     string log_str = string.Format("Close wamp server in {0}", Location);
-                    WampSetting.Logger.Log(log_str);
+                    WampProperties.Logger.Log(log_str);
                 }
             }
-            WampSetting.IsOpened = false;
+            WampProperties.IsOpened = false;
         }
+        /// <summary>
+        /// dipose
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);

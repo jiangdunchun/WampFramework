@@ -34,9 +34,18 @@ namespace WampFramework.Local
                     WampEventAttribute attr = obj as WampEventAttribute;
                     if (attr != null && attr.Export && e_inf.EventHandlerType == typeof(WampEvent))
                     {
-                        _events.Add(e_inf.Name, e_inf);
+                        List<Type> arg_types = new List<Type>();
+                        foreach (WampArgument arg in attr.Args)
+                        {
+                            arg_types.Add(arg.Type);
+                        }
 
-                        break;
+                        if (WampProperties.IsSupportType(arg_types))
+                        {
+                            _events.Add(e_inf.Name, e_inf);
+
+                            break;
+                        }
                     }
                 }
             }
@@ -51,9 +60,18 @@ namespace WampFramework.Local
                     WampMethodAttribute attr = obj as WampMethodAttribute;
                     if (attr != null && attr.Export)
                     {
-                        _methods.Add(m_inf.Name, m_inf);
+                        List<Type> arg_types = new List<Type>
+                        {
+                            m_inf.ReturnType
+                        };
+                        arg_types.AddRange(m_inf.GetGenericArguments());
 
-                        break;
+                        if (WampProperties.IsSupportType(arg_types))
+                        {
+                            _methods.Add(m_inf.Name, m_inf);
+
+                            break;
+                        }
                     }
                 }
             }
@@ -63,7 +81,7 @@ namespace WampFramework.Local
         {
             WampBroker.Instance.EventInvoked(Name, eventName, args);
         }
-        public Tuple<bool, object> Call(string methodName, string[] parameters)
+        public Tuple<bool, object> Call(string methodName, object[] parameters)
         {
             object ret = null;
 
@@ -83,7 +101,7 @@ namespace WampFramework.Local
 
                     for (int i = 0; i < p_infs.Length; i++)
                     {
-                        object arg = WampValueHelper.ParseArgument(parameters[i], p_infs[i]);
+                        object arg = WampValueHelper.GetArgument(parameters[i], p_infs[i]);
                         if (arg == null)
                         {
                             ret = null;
@@ -164,7 +182,7 @@ namespace WampFramework.Local
             }
             return true;
         }
-        public Task<Tuple<bool, object>> CallAsync(string methodName, string[] parameters)
+        public Task<Tuple<bool, object>> CallAsync(string methodName, object[] parameters)
         {
             return new Task<Tuple<bool, object>>(() => Call(methodName, parameters));
         }

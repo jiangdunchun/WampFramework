@@ -13,20 +13,17 @@ namespace WampFramework.Router
 {
     class WampDealer
     {
-        private Dictionary<UInt16, IWebSocketConnection> _methods = new Dictionary<UInt16, IWebSocketConnection>();
+        internal static readonly WampDealer Instance = new WampDealer();
+
+        private Dictionary<ushort, IWebSocketConnection> _methods = new Dictionary<ushort, IWebSocketConnection>();
 
         internal Dictionary<string, IWampCallee> CalleeDic = new Dictionary<string, IWampCallee>();
-        internal static readonly WampDealer Instance = new WampDealer();
 
         internal void Call(IWebSocketConnection socket, WampMessage data)
         {
             WampMessage ret_msg = new WampMessage();
 
-            List<string> args = new List<string>();
-            foreach (object arg in data.Args)
-            {
-                args.Add(arg.ToString());
-            }
+            List<object> args = data.Args.ToList();
 
             //if the id is not existing
             if (!_methods.ContainsKey(data.ID))
@@ -40,16 +37,16 @@ namespace WampFramework.Router
                     // call the method, and if proccess was success
                     Tuple<bool, object> call_back = CalleeDic[data.Entity].Call(data.Name, args.ToArray());
 
+                    // remove the id and socket from method pool
+                    _methods.Remove(data.ID);
+
                     if (call_back.Item1)
                     {
                         ret_msg.Construct(WampProtocolHead.CAL_SUC, data.ID, data.Entity, data.Name, new object[] { call_back.Item2 });
                         ret_msg.Send(socket);
+
+                        return;
                     }
-
-                    // remove the id and socket from method pool
-                    _methods.Remove(data.ID);
-
-                    return;
                 }
             }
 
@@ -60,11 +57,7 @@ namespace WampFramework.Router
         {
             WampMessage ret_msg = new WampMessage();
 
-            List<string> args = new List<string>();
-            foreach (object arg in data.Args)
-            {
-                args.Add(arg.ToString());
-            }
+            List<object> args = data.Args.ToList();
 
             //if the id is not existing
             if (!_methods.ContainsKey(data.ID))
@@ -80,16 +73,16 @@ namespace WampFramework.Router
                     call_task.Start();
                     Tuple<bool, object> call_ret = await call_task;
 
+                    // remove the id and socket from method pool
+                    _methods.Remove(data.ID);
+
                     if (call_ret.Item1)
                     {
                         ret_msg.Construct(WampProtocolHead.CAL_SUC, data.ID, data.Entity, data.Name, new object[] { call_ret.Item2 });
                         ret_msg.Send(socket);
+
+                        return;
                     }
-
-                    // remove the id and socket from method pool
-                    _methods.Remove(data.ID);
-
-                    return;
                 }
             }
 
@@ -98,7 +91,7 @@ namespace WampFramework.Router
         }
         internal void RemoveSocket(IWebSocketConnection socket)
         {
-            foreach (UInt16 id in _methods.Keys)
+            foreach (ushort id in _methods.Keys)
             {
                 if (_methods[id] == socket)
                 {
@@ -110,7 +103,7 @@ namespace WampFramework.Router
         {
             List<WampClassAPI> c_apis = new List<WampClassAPI>();
 
-            foreach(string name in CalleeDic.Keys)
+            foreach (string name in CalleeDic.Keys)
             {
                 WampClassAPI c_api = new WampClassAPI(name);
                 c_api.AddMethods(CalleeDic[name].ExportMethods());

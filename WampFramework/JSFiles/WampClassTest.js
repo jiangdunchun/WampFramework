@@ -1,5 +1,5 @@
 ﻿/// this is an example of WAMP in javascript
-/// support by Dunchun Jiang<jiangdunchun@outlook.com>
+/// support by VRMaker<www.vrmaker.com.cn>
 
 const WampCommon = require('./WampCommon.js');
 

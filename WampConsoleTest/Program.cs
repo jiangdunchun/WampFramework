@@ -26,10 +26,14 @@ namespace WampConsoleTest
 
             //WampRouter.Instance.IsAsyncMode = false;
             //WampRouter.Instance.IsByteMode = true;
-            //WampRouter.Instance.Export("C:/Users/JDC/Desktop");
-            //WampRouter.Instance.Logger = new ConsoleLogger();
+            //WampRouter.Instance.IsLittleEndian = true;
+            WampRouter.Instance.Export("C:/Users/JDC/Desktop");
+            WampRouter.Instance.SetLogger(new ConsoleLogger());
 
-            WampHost host = new WampHost("2222");
+            //WampRouter.Instance.ClientConnected = (msg) => { Console.WriteLine("********{0}", msg); };
+            //WampRouter.Instance.ClientBroken = (msg) => { Console.WriteLine("********{0}", msg); };
+
+            WampFleckHost host = new WampFleckHost("2223");
             host.Open();
 
             Console.ReadLine();

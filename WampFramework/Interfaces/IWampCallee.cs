@@ -15,14 +15,14 @@ namespace WampFramework.Interfaces
         /// <param name="methodName">method name</param>
         /// <param name="parameters">all parameters in a array</param>
         /// <returns>Item1 represents the whether this call is success or not,Item2 represents the return object</returns>
-        Tuple<bool, object> Call(string methodName, string[] parameters);
+        Tuple<bool, object> Call(string methodName, object[] parameters);
         /// <summary>
         /// call a method in asynchronous mode
         /// </summary>
         /// <param name="methodName">method name</param>
         /// <param name="parameters">all parameters in a array</param>
         /// <returns>Item1 represents the whether this call is success or not,Item2 represents the return object</returns>
-        Task<Tuple<bool, object>> CallAsync(string methodName, string[] parameters);
+        Task<Tuple<bool, object>> CallAsync(string methodName, object[] parameters);
         /// <summary>
         /// export all methods' api
         /// </summary>

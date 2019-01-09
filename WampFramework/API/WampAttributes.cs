@@ -16,7 +16,7 @@ namespace WampFramework.API
         /// <summary>
         /// export or not
         /// </summary>
-        public bool Export { get { return _export; } }
+        internal bool Export { get { return _export; } }
 
         public WampClassAttribute(bool export)
         {
@@ -31,14 +31,20 @@ namespace WampFramework.API
     public class WampMethodAttribute : Attribute
     {
         private bool _export;
+        private bool _threadSecurity;
         /// <summary>
         /// export or not
         /// </summary>
-        public bool Export { get { return _export; } }
+        internal bool Export { get { return _export; } }
+        /// <summary>
+        /// thread security or not
+        /// </summary>
+        internal bool ThreadSecurity { get { return _threadSecurity; } }
 
-        public WampMethodAttribute(bool export)
+        public WampMethodAttribute(bool export, bool threadScurity = false)
         {
             _export = export;
+            _threadSecurity = threadScurity;
         }
     }
 
@@ -53,62 +59,47 @@ namespace WampFramework.API
         /// <summary>
         /// export or not
         /// </summary>
-        public bool Export { get { return _export; } }
+        internal bool Export { get { return _export; } }
         /// <summary>
         /// all arguments need to be add in this list, in order to export to api file
         /// </summary>
-        public List<WampArgument> Args { get { return _args; } }
+        internal List<WampArgument> Args { get { return _args; } }
 
         public WampEventAttribute(bool export, Type a1Type, string a1Name)
         {
             _export = export;
 
-            _args.Add(new WampArgument(a1Type, a1Name));
+            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name});
         }
         public WampEventAttribute(bool export, Type a1Type, string a1Name, Type a2Type, string a2Name)
         {
             _export = export;
 
-            _args.Add(new WampArgument(a1Type, a1Name));
-            _args.Add(new WampArgument(a2Type, a2Name));
+            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
+            _args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
         }
         public WampEventAttribute(bool export, Type a1Type, string a1Name, Type a2Type, string a2Name, Type a3Type, string a3Name)
         {
             _export = export;
 
-            _args.Add(new WampArgument(a1Type, a1Name));
-            _args.Add(new WampArgument(a2Type, a2Name));
-            _args.Add(new WampArgument(a3Type, a3Name));
+            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
+            _args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
+            _args.Add(new WampArgument() { Type = a3Type, Name = a3Name });
         }
         public WampEventAttribute(bool export, Type a1Type, string a1Name, Type a2Type, string a2Name, Type a3Type, string a3Name, Type a4Type, string a4Name)
         {
             _export = export;
 
-            _args.Add(new WampArgument(a1Type, a1Name));
-            _args.Add(new WampArgument(a2Type, a2Name));
-            _args.Add(new WampArgument(a3Type, a3Name));
-            _args.Add(new WampArgument(a4Type, a4Name));
+            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
+            _args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
+            _args.Add(new WampArgument() { Type = a3Type, Name = a3Name });
+            _args.Add(new WampArgument() { Type = a4Type, Name = a4Name });
         }
     }
 
-    /// <summary>
-    /// event argument description
-    /// </summary>
-    public class WampArgument
+    internal struct WampArgument
     {
         public string Name;
         public Type Type;
-        public WampArgument(Type type, string name)
-        {
-            Type = type;
-            Name = name;
-        }
     }
-
-    /// <summary>
-    /// all wamp events need to use this delegate type, otherwise this event will not sopport the wamp subscribe
-    /// </summary>
-    /// <param name="sender">event name</param>
-    /// <param name="agrs">the arguments need to tranfer by this event</param>
-    public delegate void WampEvent(string sender, object[] agrs);
 }

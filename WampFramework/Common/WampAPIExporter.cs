@@ -90,9 +90,9 @@ namespace WampFramework.Common
 
     class WampAPIWriter
     {
-        const string ClassNote = "/// WAMP module {0}, support by VRMaker(www.vrmaker.com.cn)";
-        const string MethodNote = "// description: {0}\n// callback: {1}\n// arguments: {2}";
-        const string EventNote = "// description: {0}\n// callback arguments: {1}";
+        const string ClassComment = "/// WAMP module {0}, support by VRMaker(www.vrmaker.com.cn)";
+        const string MethodComment = "// description: {0}\n// callback: {1}\n// arguments: {2}";
+        const string EventComment = "// description: {0}\n// callback arguments: {1}";
         const string ClassBody = "var {0} = {\n{1}};\n\nexport default {0};";
         const string MethodBody = "{0} : function ({1}callback){\n{2}\n},";
         const string EventBody = "{0} : function (callback){\n{1}\n},";
@@ -100,14 +100,14 @@ namespace WampFramework.Common
         private string _path;
         private Dictionary<string, WampClassAPI> _cAPIs = new Dictionary<string, WampClassAPI>();
 
-        private string _getClassNote(WampClassAPI cAPI)
+        private string _getClassComment(WampClassAPI cAPI)
         {
-            string ret_str = ClassNote.Replace("{0}", cAPI.Name);
+            string ret_str = ClassComment.Replace("{0}", cAPI.Name);
             return ret_str;
         }
-        private string _getMethodNote(WampMethodAPI mAPI)
+        private string _getMethodComment(WampMethodAPI mAPI)
         {
-            string ret_str = MethodNote.Replace("{0}", mAPI.Description);
+            string ret_str = MethodComment.Replace("{0}", mAPI.Description);
 
             ret_str = ret_str.Replace("{1}", mAPI.ReturnType);
 
@@ -120,9 +120,9 @@ namespace WampFramework.Common
 
             return ret_str;
         }
-        private string _getEventNote(WampEventAPI eAPI)
+        private string _getEventComment(WampEventAPI eAPI)
         {
-            string ret_str = EventNote.Replace("{0}", eAPI.Description);
+            string ret_str = EventComment.Replace("{0}", eAPI.Description);
 
             string args_str = "";
             foreach (WampArgumentAPI a_api in eAPI.Args)
@@ -151,7 +151,7 @@ namespace WampFramework.Common
 
             ret_str = ret_str.Replace("{1}", met_str + eve_str);
 
-            string note = _getClassNote(cAPI);
+            string note = _getClassComment(cAPI);
 
             return note + "\n\n" + req_str + "\n\n" + ret_str;
         }
@@ -179,7 +179,7 @@ namespace WampFramework.Common
 
             ret_str = ret_str.Replace("{2}", met_body);
 
-            string note = _getMethodNote(mAPI);
+            string note = _getMethodComment(mAPI);
             return note + "\n" + ret_str;
         }
         private string _getEventBody(WampEventAPI eAPI, string cName)
@@ -192,7 +192,7 @@ namespace WampFramework.Common
             string add_str = ret_str.Replace("{1}", sube_body);
             string del_str = ret_str.Replace("{1}", unsube_body);
 
-            string note = _getEventNote(eAPI);
+            string note = _getEventComment(eAPI);
 
             return note + "\n" + "Add" + add_str + "\n" + note + "\n" + "Delete" + del_str;
         }

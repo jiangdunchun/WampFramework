@@ -13,8 +13,17 @@ namespace WampFramework.Router
 {
     public class WampRouter
     {
-        private WampHost _host = null;
+        struct MessageItem
+        {
+            public IWebSocketConnection Socket;
+            public WampMessage Message;
+        }
+
+        public static readonly WampRouter Instance = new WampRouter();
+
+        private WampFleckHost _host = null;
         private Dictionary<string, WampClassAPI> _apiPool = new Dictionary<string, WampClassAPI>();
+        private List<MessageItem> _messageQueue = new List<MessageItem>();
 
         private async void _resolveMessage(IWebSocketConnection socket, object message)
         {
@@ -23,27 +32,39 @@ namespace WampFramework.Router
             if (rec_obj.Construct(message))
             {
                 // log, when a right message received
-                if (WampSetting.Logger != null)
+                if (WampProperties.Logger != null && WampProperties.LogReceived)
                 {
                     string log_str = string.Format("Receive a message from {0}:{1}, is {2}", 
                         socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort, rec_obj.ToString());
-                    WampSetting.Logger.Log(log_str);
+                    WampProperties.Logger.Log(log_str);
                 }
 
                 switch (rec_obj.Protocol)
                 {
                     case WampProtocolHead.CAL:
-                        if (!WampSetting.IsAsyncMode)
+                        // if not thread security, the message would be push to a queue, 
+                        // and excuted when the MessageHandler() was invoked
+                        if (!WampProperties.IsThreadSecurity)
                         {
-                            WampDealer.Instance.Call(socket, rec_obj);
+                            lock (_messageQueue)
+                            {
+                                _messageQueue.Add(new MessageItem() { Socket = socket, Message = rec_obj });
+                            }
                         }
                         else
                         {
-                            await WampDealer.Instance.CallAsync(socket, rec_obj);
+                            if (!WampProperties.IsAsyncMode)
+                            {
+                                WampDealer.Instance.Call(socket, rec_obj);
+                            }
+                            else
+                            {
+                                await WampDealer.Instance.CallAsync(socket, rec_obj);
+                            }
                         }
                         break;
                     case WampProtocolHead.SBS:
-                        if (!WampSetting.IsAsyncMode)
+                        if (!WampProperties.IsAsyncMode)
                         {
                             WampBroker.Instance.Subscribe(socket, rec_obj);
                         }
@@ -53,7 +74,7 @@ namespace WampFramework.Router
                         }
                         break;
                     case WampProtocolHead.UNSBS:
-                        if (!WampSetting.IsAsyncMode)
+                        if (!WampProperties.IsAsyncMode)
                         {
                             WampBroker.Instance.Unsubscribe(socket, rec_obj);
                         }
@@ -70,11 +91,11 @@ namespace WampFramework.Router
             else
             {
                 // log, when a wrong message received
-                if (WampSetting.Logger != null)
+                if (WampProperties.Logger != null)
                 {
                     string log_str = string.Format("Receive a wrong message from {0}:{1}, is {2}", 
                         socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort, rec_obj.ToString());
-                    WampSetting.Logger.Log(log_str);
+                    WampProperties.Logger.Log(log_str);
                 }
 
                 rec_obj.SendErro(socket, message);
@@ -85,20 +106,32 @@ namespace WampFramework.Router
             WampBroker.Instance.RemoveSocket(socket);
             WampDealer.Instance.RemoveSocket(socket);
 
+            if (ClientBroken != null)
+            {
+                string socket_str = string.Format("{0}:{1}", socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort);
+                ClientBroken(socket_str);
+            }
+
             // log, when a sockect broken
-            if (WampSetting.Logger != null)
+            if (WampProperties.Logger != null)
             {
                 string log_str = string.Format("Break up a socket from {0}:{1}", socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort);
-                WampSetting.Logger.Log(log_str);
+                WampProperties.Logger.Log(log_str);
             }
         }
         private void _socketConnected(IWebSocketConnection socket)
         {
+            if (ClientConnected != null)
+            {
+                string socket_str = string.Format("{0}:{1}", socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort);
+                ClientConnected(socket_str);
+            }
+
             // log, when a sockect connected
-            if (WampSetting.Logger != null)
+            if (WampProperties.Logger != null)
             {
                 string log_str = string.Format("Connect in a new socket from {0}:{1}", socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort);
-                WampSetting.Logger.Log(log_str);
+                WampProperties.Logger.Log(log_str);
             }
         }
         private void _registerLocalType(Type type)
@@ -120,7 +153,7 @@ namespace WampFramework.Router
             }
         }
 
-        internal WampHost Host
+        internal WampFleckHost Host
         {
             set
             {
@@ -138,37 +171,77 @@ namespace WampFramework.Router
                 _host.SocketConnected += _socketConnected;
             }
         }
+
+        /// <summary>
+        /// whether the message is in Byte[] Mode or string Mode
+        /// </summary>
         public bool IsByteMode
         {
             set
             {
-                WampSetting.IsByteMode = value;
+                WampProperties.IsByteMode = value;
             }
             get
             {
-                return WampSetting.IsByteMode;
+                return WampProperties.IsByteMode;
             }
         }
+        /// <summary>
+        /// whether the message is little endian or big endian in Byte[] Mode
+        /// </summary>
+        public bool IsLittleEndian
+        {
+            set
+            {
+                WampProperties.IsLittleEndian = value;
+            }
+            get
+            {
+                return WampProperties.IsLittleEndian;
+            }
+        }
+        /// <summary>
+        /// whether APIs could be invoked in a different thread
+        /// </summary>
+        public bool IsThreadSecurity
+        {
+            set
+            {
+                WampProperties.IsThreadSecurity = value;
+            }
+            get
+            {
+                return WampProperties.IsThreadSecurity;
+            }
+        }
+        /// <summary>
+        /// whether the RPC command is invoked asynchronously
+        /// </summary>
         public bool IsAsyncMode
         {
             set
             {
-                WampSetting.IsAsyncMode = value;
+                WampProperties.IsAsyncMode = value;
             }
             get
             {
-                return WampSetting.IsAsyncMode;
+                return WampProperties.IsAsyncMode;
             }
         }
-        public IWampLogger Logger
-        {
-            set
-            {
-                WampSetting.Logger = value;
-            }
-        }
-        public static readonly WampRouter Instance = new WampRouter();
+        /// <summary>
+        /// invoked when a client connected
+        /// </summary>
+        public Action<string> ClientConnected;
+        /// <summary>
+        /// invoked when a client broken
+        /// </summary>
+        public Action<string> ClientBroken;
 
+        /// <summary>
+        /// register all APIs in the assembly of this class
+        /// </summary>
+        /// <param name="exporter">interface of exporter</param>
+        /// <returns>success or not</returns>
         public bool Register(IWampLocalExporter exporter)
         {
             Type type = exporter.GetType();
@@ -182,14 +255,19 @@ namespace WampFramework.Router
             }
 
             // log, when a local assemble was registered
-            if (WampSetting.Logger != null)
+            if (WampProperties.Logger != null)
             {
                 string log_str = string.Format("Registered a local assemble {0}", type.Name);
-                WampSetting.Logger.Log(log_str);
+                WampProperties.Logger.Log(log_str);
             }
 
             return true;
         }
+        /// <summary>
+        /// export all APIs to js files
+        /// </summary>
+        /// <param name="path">js files' path</param>
+        /// <returns>success or not</returns>
         public bool Export(string path)
         {
             WampAPIWriter writer = new WampAPIWriter(path);
@@ -200,6 +278,47 @@ namespace WampFramework.Router
             writer.Write();
 
             return true;
+        }
+        /// <summary>
+        /// set logger and log standard
+        /// </summary>
+        /// <param name="logger">Logger of wamp framework</param>
+        /// <param name="standard">log standard</param>
+        public void SetLogger(IWampLogger logger, LogStandard standard = LogStandard.ALL)
+        {
+            WampProperties.Logger = logger;
+            switch (standard)
+            {
+                case LogStandard.RECEIVED_ONLY:
+                    WampProperties.LogReceived = true;
+                    WampProperties.LogSend = false;
+                    break;
+                case LogStandard.SEND_ONLY:
+                    WampProperties.LogReceived = false;
+                    WampProperties.LogSend = true;
+                    break;
+                case LogStandard.ALL:
+                    WampProperties.LogReceived = true;
+                    WampProperties.LogSend = true;
+                    break;
+            }
+        }
+        /// <summary>
+        /// if not in thread security mode, all RPC commands will be handled when this method was invoked
+        /// </summary>
+        public void MessageHandler()
+        {
+            List<MessageItem> _messageBuffer = new List<MessageItem>();
+            lock (_messageQueue)
+            {
+                _messageBuffer.AddRange(_messageQueue);
+                _messageQueue.Clear();
+            }
+
+            foreach (MessageItem message in _messageBuffer)
+            {
+                WampDealer.Instance.Call(message.Socket, message.Message);
+            }
         }
     }
 }
