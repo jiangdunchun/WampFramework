@@ -73,16 +73,9 @@ namespace WampFramework.Common
 
             return true;
         }
-        static internal bool ParseBytes(string value, out byte[] ret, Encoding encoding = null)
+        static internal bool ParseBytes(string value, out byte[] ret, Encoding encoding)
         {
-            if (encoding == null)
-            {
-                ret = Encoding.Default.GetBytes(value);
-            }
-            else
-            {
-                ret = encoding.GetBytes(value);
-            }
+            ret = encoding.GetBytes(value);
 
             if (WampProperties.NeedReversed)
             {
@@ -91,18 +84,11 @@ namespace WampFramework.Common
 
             return true;
         }
-        static internal bool ParseBytes(IWampJsonData value, out byte[] ret, Encoding encoding = null)
+        static internal bool ParseBytes(IWampJsonData value, out byte[] ret, Encoding encoding)
         {
             string str_value = value.ToJson();
 
-            if (encoding == null)
-            {
-                ret = Encoding.Default.GetBytes(str_value);
-            }
-            else
-            {
-                ret = encoding.GetBytes(str_value);
-            }
+            ret = encoding.GetBytes(str_value);
 
             if (WampProperties.NeedReversed)
             {

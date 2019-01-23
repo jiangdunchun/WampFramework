@@ -15,11 +15,11 @@ namespace WampFramework.Router
     {
         internal static readonly WampDealer Instance = new WampDealer();
 
-        private Dictionary<ushort, IWebSocketConnection> _methods = new Dictionary<ushort, IWebSocketConnection>();
+        private Dictionary<ushort, WampClient> _methods = new Dictionary<ushort, WampClient>();
 
         internal Dictionary<string, IWampCallee> CalleeDic = new Dictionary<string, IWampCallee>();
 
-        internal void Call(IWebSocketConnection socket, WampMessage data)
+        internal void Call(WampClient socket, WampMessage data)
         {
             WampMessage ret_msg = new WampMessage();
 
@@ -53,7 +53,7 @@ namespace WampFramework.Router
             ret_msg.Construct(WampProtocolHead.CAL_FAL, data.ID, data.Entity, data.Name);
             ret_msg.Send(socket);
         }
-        internal async Task CallAsync(IWebSocketConnection socket, WampMessage data)
+        internal async Task CallAsync(WampClient socket, WampMessage data)
         {
             WampMessage ret_msg = new WampMessage();
 
@@ -89,7 +89,7 @@ namespace WampFramework.Router
             ret_msg.Construct(WampProtocolHead.CAL_FAL, data.ID, data.Entity, data.Name);
             ret_msg.Send(socket);
         }
-        internal void RemoveSocket(IWebSocketConnection socket)
+        internal void RemoveSocket(WampClient socket)
         {
             foreach (ushort id in _methods.Keys)
             {

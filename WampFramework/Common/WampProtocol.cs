@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WampFramework.API;
+using WampFramework.Router;
 
 namespace WampFramework.Common
 {
@@ -243,7 +244,7 @@ namespace WampFramework.Common
             List<byte> str_entity = new List<byte>();
             foreach (string arg_str in value)
             {
-                if (WampValueHelper.ParseBytes(arg_str, out byte[] arg_bs))
+                if (WampValueHelper.ParseBytes(arg_str, out byte[] arg_bs, WampProperties.StrEncoding))
                 {
                     if (WampValueHelper.ParseBytes(arg_bs.Length, out byte[] arg_length))
                     {
@@ -403,7 +404,7 @@ namespace WampFramework.Common
             List<byte> json_entity = new List<byte>();
             foreach (IWampJsonData arg_json in value)
             {
-                if (WampValueHelper.ParseBytes(arg_json, out byte[] arg_bs))
+                if (WampValueHelper.ParseBytes(arg_json, out byte[] arg_bs, WampProperties.StrEncoding))
                 {
                     if (WampValueHelper.ParseBytes(arg_bs.Length, out byte[] arg_length))
                     {
@@ -429,6 +430,7 @@ namespace WampFramework.Common
      * received message: WampProtocol|ID     |ClassName|MethodorEventName(|arg1           |arg2           |arg3                     )
      * 
      * send message:     WampProtocol|ID     |ClassName|MethodorEventName(|arg1           |arg2           |arg3                     )
+     * 
      * 
      * byte message foramte
      * received message: WampProtocol|ID     |ClassName|MethodorEventName(|arg1           |arg2           |arg3                     )
@@ -457,7 +459,7 @@ namespace WampFramework.Common
         private string _name;
         private object[] _args;
 
-        private void _sendString(IWebSocketConnection socket)
+        private void _sendString(WampClient socket)
         {
             string send_str = (byte)_protocol + ITEM_SPLIT_STR + _id + ITEM_SPLIT_STR + _entity + ITEM_SPLIT_STR + _name;
 
@@ -482,7 +484,7 @@ namespace WampFramework.Common
 
             socket.Send(send_str);
         }
-        private void _sendByte(IWebSocketConnection socket)
+        private void _sendByte(WampClient socket)
         {
             List<byte> ret_byte = new List<byte>
             {
@@ -497,7 +499,7 @@ namespace WampFramework.Common
             }
 
             // entity and name, "_entity,_name", length is 1+n, 1 is n's length(less than 255)
-            if (WampValueHelper.ParseBytes(string.Format("{0},{1}", _entity, _name), out byte[] name_bs))
+            if (WampValueHelper.ParseBytes(string.Format("{0},{1}", _entity, _name), out byte[] name_bs, WampProperties.StrEncoding))
             {
                 if (name_bs.Length >= MAX_NAME_LENGTH)
                 {
@@ -820,7 +822,7 @@ namespace WampFramework.Common
                 }
                 else if (arg.GetType() == typeof(string))
                 {
-                    if (WampValueHelper.ParseBytes((string)arg, out byte[] arg_bs))
+                    if (WampValueHelper.ParseBytes((string)arg, out byte[] arg_bs, WampProperties.StrEncoding))
                     {
                         msg_bs.Add((byte)(WampArgType.STRING));
                         if (WampValueHelper.ParseBytes(arg_bs.Length, out byte[] arg_length))
@@ -882,7 +884,7 @@ namespace WampFramework.Common
                 }
                 else if (typeof(IWampJsonData).IsAssignableFrom(arg.GetType()))
                 {
-                    if (WampValueHelper.ParseBytes((IWampJsonData)arg, out byte[] arg_bs))
+                    if (WampValueHelper.ParseBytes((IWampJsonData)arg, out byte[] arg_bs, WampProperties.StrEncoding))
                     {
                         msg_bs.Add((byte)(WampArgType.JSON));
                         if (WampValueHelper.ParseBytes(arg_bs.Length, out byte[] arg_length))
@@ -1102,7 +1104,7 @@ namespace WampFramework.Common
 
             return true;
         }
-        internal void Send(IWebSocketConnection socket)
+        internal void Send(WampClient socket)
         {
             if (WampProperties.IsByteMode)
             {
@@ -1116,12 +1118,12 @@ namespace WampFramework.Common
             // log, when send a message back
             if (WampProperties.Logger != null && WampProperties.LogSend)
             {
-                string log_str = string.Format("Send a message from {0}:{1}, is {2}",
-                    socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort, this.ToString());
+                string log_str = string.Format("Send a message to {0}, is {1}",
+                    socket.ToString(), this.ToString());
                 WampProperties.Logger.Log(log_str);
             }
         }
-        internal void SendErro(IWebSocketConnection socket, object message)
+        internal void SendErro(WampClient socket, object message)
         {
             if (message.GetType() == typeof(byte[]))
             {
@@ -1141,8 +1143,8 @@ namespace WampFramework.Common
             // log, when send an erro message back
             if (WampProperties.Logger != null)
             {
-                string log_str = string.Format("Send an erro message from {0}:{1}, is {2}|{3}",
-                    socket.ConnectionInfo.ClientIpAddress, socket.ConnectionInfo.ClientPort, (byte)WampProtocolHead.ERROR, message);
+                string log_str = string.Format("Send an erro message from {0}, is {1}|{2}",
+                    socket.ToString(), (byte)WampProtocolHead.ERROR, message);
                 WampProperties.Logger.Log(log_str);
             }
         }

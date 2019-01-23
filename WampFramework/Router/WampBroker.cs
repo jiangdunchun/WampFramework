@@ -21,7 +21,7 @@ namespace WampFramework.Router
 
         internal static readonly WampBroker Instance = new WampBroker();
 
-        private Dictionary<SubeventInfo, Dictionary<ushort, IWebSocketConnection>> _events = new Dictionary<SubeventInfo, Dictionary<UInt16, IWebSocketConnection>>();
+        private Dictionary<SubeventInfo, Dictionary<ushort, WampClient>> _events = new Dictionary<SubeventInfo, Dictionary<UInt16, WampClient>>();
 
         internal Dictionary<string, IWampPublisher> PublisherDic = new Dictionary<string, IWampPublisher>();
 
@@ -43,7 +43,7 @@ namespace WampFramework.Router
                 ret_msg.Send(_events[e_inf][id]);
             }
         }
-        internal void Subscribe(IWebSocketConnection socket, WampMessage data)
+        internal void Subscribe(WampClient socket, WampMessage data)
         {
             SubeventInfo e_inf = new SubeventInfo()
             {
@@ -66,7 +66,7 @@ namespace WampFramework.Router
                         if (PublisherDic[data.Entity].Subscribe(data.Name))
                         {
                             // add new event type in event pool
-                            _events.Add(e_inf, new Dictionary<ushort, IWebSocketConnection>());
+                            _events.Add(e_inf, new Dictionary<ushort, WampClient>());
                         }
                         // if adding proccess was failed 
                         else
@@ -89,7 +89,7 @@ namespace WampFramework.Router
             ret_msg.Construct(WampProtocolHead.SUB_FAL, data.ID, data.Entity, data.Name);
             ret_msg.Send(socket);
         }
-        internal void Unsubscribe(IWebSocketConnection socket, WampMessage data)
+        internal void Unsubscribe(WampClient socket, WampMessage data)
         {
             SubeventInfo e_inf = new SubeventInfo()
             {
@@ -132,7 +132,7 @@ namespace WampFramework.Router
             ret_msg.Construct(WampProtocolHead.UNSBS_FAL, data.ID, data.Entity, data.Name);
             ret_msg.Send(socket);
         }
-        internal async Task SubscribeAsync(IWebSocketConnection socket, WampMessage data)
+        internal async Task SubscribeAsync(WampClient socket, WampMessage data)
         {
             SubeventInfo e_inf = new SubeventInfo()
             {
@@ -159,7 +159,7 @@ namespace WampFramework.Router
                         if (sub_ret)
                         {
                             // add new event type in event pool
-                            _events.Add(e_inf, new Dictionary<ushort, IWebSocketConnection>());
+                            _events.Add(e_inf, new Dictionary<ushort, WampClient>());
                         }
                         // if adding proccess was failed 
                         else
@@ -182,7 +182,7 @@ namespace WampFramework.Router
             ret_msg.Construct(WampProtocolHead.SUB_FAL, data.ID, data.Entity, data.Name);
             ret_msg.Send(socket);
         }
-        internal async Task UnsubscribeAsync(IWebSocketConnection socket, WampMessage data)
+        internal async Task UnsubscribeAsync(WampClient socket, WampMessage data)
         {
             SubeventInfo e_inf = new SubeventInfo()
             {
@@ -229,7 +229,7 @@ namespace WampFramework.Router
             ret_msg.Construct(WampProtocolHead.UNSBS_FAL, data.ID, data.Entity, data.Name);
             ret_msg.Send(socket);
         }
-        internal void RemoveSocket(IWebSocketConnection socket)
+        internal void RemoveSocket(WampClient socket)
         {
             foreach (SubeventInfo e_inf in _events.Keys)
             {

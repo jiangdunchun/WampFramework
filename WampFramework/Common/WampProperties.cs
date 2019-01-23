@@ -11,11 +11,10 @@ namespace WampFramework.Common
     {
         static private bool _needReversed = false;
         static private bool _isLittleEndian = BitConverter.IsLittleEndian;
+        static private Encoding _strEncoding = Encoding.Default;
         static private bool _isByteMode = false;
         static private bool _isThreadSecurity = true;
         static private bool _isAsyncMode = true;
-        static private bool _isServerOpen = false;
-        static private string _serverAddress = "ws://0.0.0.0:9527";
         static private IWampLogger _logger = null;
         static private bool _logReceived = false;
         static private bool _logSend = false;
@@ -76,6 +75,17 @@ namespace WampFramework.Common
                 return !_isLittleEndian;
             }
         }
+        static internal Encoding StrEncoding
+        {
+            get
+            {
+                return _strEncoding;
+            }
+            set
+            {
+                _strEncoding = value;
+            }
+        }
         static internal bool IsByteMode
         {
             set
@@ -133,28 +143,6 @@ namespace WampFramework.Common
             get
             {
                 return !_isAsyncMode;
-            }
-        }
-        static internal bool IsOpened
-        {
-            set
-            {
-                _isServerOpen = value;
-            }
-            get
-            {
-                return _isServerOpen;
-            }
-        }
-        static internal string Location
-        {
-            set
-            {
-                _serverAddress = value;
-            }
-            get
-            {
-                return _serverAddress;
             }
         }
         static internal IWampLogger Logger

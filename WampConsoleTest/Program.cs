@@ -24,17 +24,16 @@ namespace WampConsoleTest
 
             WampRouter.Instance.Register(test);
 
-            //WampRouter.Instance.IsAsyncMode = false;
-            //WampRouter.Instance.IsByteMode = true;
-            //WampRouter.Instance.IsLittleEndian = true;
+            //WampRouter.Instance.Context.IsLittleEndian = true;
             WampRouter.Instance.Export("C:/Users/JDC/Desktop");
             WampRouter.Instance.SetLogger(new ConsoleLogger());
 
             //WampRouter.Instance.ClientConnected = (msg) => { Console.WriteLine("********{0}", msg); };
             //WampRouter.Instance.ClientBroken = (msg) => { Console.WriteLine("********{0}", msg); };
 
-            WampFleckHost host = new WampFleckHost("2223");
-            host.Open();
+            WampHost host = new WampHost(2223, "wamp");
+            host.Start();
+            WampRouter.Instance.Host = host;
 
             Console.ReadLine();
         }

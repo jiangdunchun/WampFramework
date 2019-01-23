@@ -1,134 +1,182 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Fleck;
 using WampFramework.Common;
-using WampFramework.API;
 using WampFramework.Interfaces;
+using WebSocketSharp;
+using WebSocketSharp.Server;
 
 namespace WampFramework.Router
 {
-    public class WampFleckHost : IDisposable
+    public class WampHost
     {
-        public WampFleckHost(string port)
+        public WampHost(int port, string router)
         {
-            WampProperties.Location = string.Format("ws://0.0.0.0:{0}", port);
+            WampClient.ClientConnected = (socket) =>
+            {
+                if (ClientConnected != null)
+                {
+                    ClientConnected(socket);
+                }
+                if (UserConnected != null)
+                {
+                    UserConnected(new WampUser(socket));
+                }
+            };
+            WampClient.ClientBroken = (socket) =>
+            {
+                if (ClientBroken != null)
+                {
+                    ClientBroken(socket);
+                }
+                if (UserBroken != null)
+                {
+                    UserBroken(new WampUser(socket));
+                }
+            };
+            WampClient.MessageReceived = (socket, msg) =>
+            {
+                if (MessageReceived != null)
+                {
+                    MessageReceived(socket, msg);
+                }
+            };
 
-            WampRouter.Instance.Host = this;
-        }
-        ~WampFleckHost()
-        {
-            Dispose(false);
+            _server = new WebSocketServer(port);
+            _server.AddWebSocketService<WampClient> (string.Format("/{0}", router));
+
+            _port = port;
+            _router = router;
         }
 
+        private int _port = -1;
+        private string _router = string.Empty;
+        private bool _isOpened = false;
         private WebSocketServer _server = null;
 
-        internal delegate void SocketEvent(IWebSocketConnection socket);
-        internal delegate void MessageEvent(IWebSocketConnection socket, object message);
-        internal event SocketEvent SocketConnected = null;
-        internal event SocketEvent SocketBroken = null;
-        internal event MessageEvent MessageReceived = null;
+        internal Action<WampClient> ClientConnected;
+        internal Action<WampClient> ClientBroken;
+        internal Action<WampClient, object> MessageReceived;
 
         /// <summary>
-        /// the server's location
+        /// invoked when a client connected
         /// </summary>
-        public string Location { get { return WampProperties.Location; } }
+        public Action<WampUser> UserConnected;
         /// <summary>
-        /// whether the server is openning
+        /// invoked when a client broken
         /// </summary>
-        public bool IsOpen { get { return WampProperties.IsOpened; } }
+        public Action<WampUser> UserBroken;
 
-        protected virtual void Dispose(bool disposing)
+        /// <summary>
+        /// Port of this wamp host
+        /// </summary>
+        public int Port { get { return _port; } }
+        /// <summary>
+        /// router of this wamp host, no "/"
+        /// </summary>
+        public string Router { get { return _router; } }
+        /// <summary>
+        /// is this wamp host opening
+        /// </summary>
+        public bool IsOpen { get { return _isOpened; } }
+
+        /// <summary>
+        /// start this wamp host, and listen to the client
+        /// </summary>
+        public void Start()
         {
-            if (disposing)
+            if (_server != null)
             {
-                if (_server != null)
+                _server.Start();
+                if (_server.IsListening)
                 {
-                    _server.Dispose();
-                    _server = null;
+                    // is listening
+                    _isOpened = true;
                 }
             }
         }
-
         /// <summary>
-        /// Open a server host
-        /// </summary>
-        public void Open()
-        {
-            Close();
-
-            string log_str = string.Empty;
-
-            _server = new WebSocketServer(WampProperties.Location);
-            try
-            {
-                _server.Start(socket =>
-                {
-                    socket.OnOpen = () =>
-                    {
-                        if (SocketConnected != null) SocketConnected(socket);
-                    };
-                    socket.OnClose = () =>
-                    {
-                        if (SocketBroken != null) SocketBroken(socket);
-                    };
-                    socket.OnMessage = (message) =>
-                    {
-                        if (MessageReceived != null) MessageReceived(socket, message);
-                    };
-                    socket.OnBinary = (message) =>
-                    {
-                        if (MessageReceived != null) MessageReceived(socket, message);
-                    };
-                });
-
-                WampProperties.IsOpened = true;
-
-                log_str = string.Format("Start wamp server successfully in {0}", Location);
-            }
-            catch (Exception)
-            {
-                string e_str = string.Format("Start wamp server unsuccessfully in {0}, check the location", Location);
-
-                //log_str = e_str;
-
-                WampHostException wh_e = new WampHostException(e_str);
-                throw wh_e;
-            }
-
-            // log, when the server started
-            if (WampProperties.Logger != null)
-            {
-                WampProperties.Logger.Log(log_str);
-            }
-        }
-        /// <summary>
-        /// close a server host
+        /// close this wamp host
         /// </summary>
         public void Close()
         {
             if (_server != null)
             {
-                _server.Dispose();
-
-                // log, when the server closed
-                if (WampProperties.Logger != null)
-                {
-                    string log_str = string.Format("Close wamp server in {0}", Location);
-                    WampProperties.Logger.Log(log_str);
-                }
+                _server.Stop();
+                _isOpened = false;
+                _server = null;
             }
-            WampProperties.IsOpened = false;
         }
-        /// <summary>
-        /// dipose
-        /// </summary>
-        public void Dispose()
+    }
+
+    public class WampUser
+    {
+        internal WampUser(WampClient client)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            _client = client;
+        }
+
+        private WampClient _client;
+
+        public string IP { get { return _client.IP; } }
+        public int Port { get { return _client.Port; } }
+    }
+
+    class WampClient : WebSocketBehavior
+    {
+        protected override void OnOpen()
+        {
+            if (ClientConnected != null)
+            {
+                ClientConnected(this);
+            }
+        }
+        protected override void OnClose(CloseEventArgs e)
+        {
+            if (ClientBroken != null)
+            {
+                ClientBroken(this);
+            }
+        }
+        protected override void OnMessage(MessageEventArgs e)
+        {
+            if (MessageReceived != null)
+            {
+                object ret = null;
+                if (e.IsText)
+                {
+                    ret = e.Data;
+                }
+                else if (e.IsBinary)
+                {
+                    ret = e.RawData;
+                }
+
+                MessageReceived(this, ret);
+            }
+        }
+
+        static public Action<WampClient> ClientConnected;
+        static public Action<WampClient> ClientBroken;
+        static public Action<WampClient, object> MessageReceived;
+
+        public string IP { get { return base.Context.UserEndPoint.Address.ToString(); } }
+        public int Port { get { return base.Context.UserEndPoint.Port; } }
+
+        public new void Send(string message)
+        {
+            base.Send(message);
+        }
+        public new void Send(byte[] message)
+        {
+            base.Send(message);
+        }
+        public override string ToString()
+        {
+            return string.Format("{0}:{1}", IP, Port);
         }
     }
 }

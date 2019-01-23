@@ -76,7 +76,6 @@
     <Compile Include="Common\WampProperties.cs" />
     <Compile Include="Interfaces\IWampCallee.cs" />
     <Compile Include="Interfaces\IWampCaller.cs" />
-    <Compile Include="Interfaces\IWampHost.cs" />
     <Compile Include="Interfaces\IWampPublisher.cs" />
     <Compile Include="Interfaces\IWampSubscriber.cs" />
     <Compile Include="Local\WampLocalCalleePublisher.cs" />
@@ -86,9 +85,8 @@
     <Compile Include="Common\WampProtocol.cs" />
     <Compile Include="Router\WampBroker.cs" />
     <Compile Include="Router\WampDealer.cs" />
-    <Compile Include="Router\WampHost.cs" />
     <Compile Include="Router\WampRouter.cs" />
-    <Compile Include="Router\WampSharpHost.cs" />
+    <Compile Include="Router\WampHost.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="JSFiles\WampCommon.js" />

@@ -1,5 +1,5 @@
 ﻿/// this is the basic module of WAMP in javascript
-/// support by VRMaker<www.vrmaker.com.cn>
+/// support by Dunchun Jiang<jiangdunchun@outlook.com>
 
 const _wamp_socket = require('./WampConfig.js');
 
