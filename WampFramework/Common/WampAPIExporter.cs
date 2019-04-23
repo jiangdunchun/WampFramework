@@ -88,9 +88,9 @@ namespace WampFramework.Common
         }
     }
 
-    class WampAPIWriter
+    class WampAPIExporter
     {
-        const string ClassComment = "/// WAMP module {0}, support by VRMaker(www.vrmaker.com.cn)";
+        const string ClassComment = "/// WAMP module {0}, supported by Jiang Dunchun(jiangdunchun@outlook.com)";
         const string MethodComment = "// description: {0}\n// callback: {1}\n// arguments: {2}";
         const string EventComment = "// description: {0}\n// callback arguments: {1}";
         const string ClassBody = "var {0} = {\n{1}};\n\nexport default {0};";
@@ -135,7 +135,7 @@ namespace WampFramework.Common
         }
         private string _getClassBody(WampClassAPI cAPI)
         {
-            string req_str = "const _socket = require('./WampConfig.js');\nconst WampCommon = require('./WampCommon.js')(_socket); ";
+            string req_str = "const WampCommon = require('./WampCommon.js'); ";
             string ret_str = ClassBody.Replace("{0}", cAPI.Name);
 
             string met_str = "";
@@ -186,7 +186,6 @@ namespace WampFramework.Common
         {
             string ret_str = EventBody.Replace("{0}", eAPI.Name);
 
-            // @ to do, replace {1}, event body 
             string sube_body = string.Format("WampCommon.WampSubscribe('{0}','{1}',callback);", cName, eAPI.Name);
             string unsube_body = string.Format("WampCommon.WampUnsubscribe('{0}','{1}',callback);", cName, eAPI.Name);
             string add_str = ret_str.Replace("{1}", sube_body);
@@ -209,7 +208,7 @@ namespace WampFramework.Common
             sw.Close();
         }
 
-        internal WampAPIWriter(string path)
+        internal WampAPIExporter(string path)
         {
             _path = path;
         }
@@ -233,7 +232,7 @@ namespace WampFramework.Common
                 Add(cAPI);
             }
         }
-        internal void Write()
+        internal void Export()
         {
             foreach(string c_name in _cAPIs.Keys)
             {

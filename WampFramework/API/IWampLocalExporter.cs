@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace WampFramework.API
 {
     /// <summary>
-    /// all assemble need have a class inherited from this interface
+    /// all local assemblies must have a public class inherited from this interface
     /// </summary>
     public interface IWampLocalExporter
     {

@@ -40,7 +40,7 @@ namespace WampFramework.Local
                             arg_types.Add(arg.Type);
                         }
 
-                        if (WampProperties.IsSupportType(arg_types))
+                        if (WampProperties.IsSupportedType(arg_types))
                         {
                             _events.Add(e_inf.Name, e_inf);
 
@@ -66,7 +66,7 @@ namespace WampFramework.Local
                         };
                         arg_types.AddRange(m_inf.GetGenericArguments());
 
-                        if (WampProperties.IsSupportType(arg_types))
+                        if (WampProperties.IsSupportedType(arg_types))
                         {
                             _methods.Add(m_inf.Name, m_inf);
 
@@ -141,7 +141,7 @@ namespace WampFramework.Local
                     }
 
                     MethodInfo m_inf = (this.GetType()).GetMethod(nameof(EventInvoked));
-                    // @to do, throw exception when the type is not EventHandler
+                    //@TODO: throw exception when the type is not EventHandler
                     Delegate dlg = Delegate.CreateDelegate(e_inf.EventHandlerType, this, m_inf);
                     e_inf.AddEventHandler(_instance, dlg);
                 }
@@ -167,7 +167,7 @@ namespace WampFramework.Local
                     if (_instance == null) return false;
 
                     MethodInfo m_inf = (this.GetType()).GetMethod(nameof(EventInvoked));
-                    // throw exception when the type is not EventHandler
+                    //@TODO: throw exception when the type is not EventHandler
                     Delegate dlg = Delegate.CreateDelegate(e_inf.EventHandlerType, this, m_inf);
                     e_inf.RemoveEventHandler(_instance, dlg);
                 }
@@ -185,14 +185,6 @@ namespace WampFramework.Local
         public Task<Tuple<bool, object>> CallAsync(string methodName, object[] parameters)
         {
             return new Task<Tuple<bool, object>>(() => Call(methodName, parameters));
-        }
-        public Task<bool> SubscribeAsync(string eventName)
-        {
-            return new Task<bool>(() => Subscribe(eventName));
-        }
-        public Task<bool> UnsubscribeAsync(string eventName)
-        {
-            return new Task<bool>(() => Unsubscribe(eventName));
         }
         public List<WampMethodAPI> ExportMethods()
         {

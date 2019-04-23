@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,11 +24,11 @@ namespace WampFramework.Common
         UNSBS_SUC = 28,
         UNSBS_FAL = 29,
 
-        REG = 30,
-        REG_SUC = 38,
-        REG_FAL = 39,
+        REG = 200,
+        REG_SUC = 208,
+        REG_FAL = 209,
 
-        ERROR = 101
+        ERROR = 255
     }
 
     enum WampArgType : byte
@@ -396,12 +397,12 @@ namespace WampFramework.Common
 
             return ret;
         }
-        static internal List<byte> GetBytes(List<IWampJsonData> value)
+        static internal List<byte> GetBytes(List<IWampJson> value)
         {
             List<byte> ret = new List<byte>();
 
             List<byte> json_entity = new List<byte>();
-            foreach (IWampJsonData arg_json in value)
+            foreach (IWampJson arg_json in value)
             {
                 if (WampValueHelper.ParseBytes(arg_json, out byte[] arg_bs, WampProperties.StrEncoding))
                 {
@@ -423,32 +424,24 @@ namespace WampFramework.Common
         }
     }
 
-    /* WampProtocol: byte
-     * ID: ushort
-     * string message formate
-     * received message: WampProtocol|ID     |ClassName|MethodorEventName(|arg1           |arg2           |arg3                     )
-     * 
-     * send message:     WampProtocol|ID     |ClassName|MethodorEventName(|arg1           |arg2           |arg3                     )
-     * 
-     * 
-     * byte message foramte
-     * received message: WampProtocol|ID     |ClassName|MethodorEventName(|arg1           |arg2           |arg3                     )
-     * data type:        byte        |ushort |byte+string                (|byte+int       |byte+double    |byte+int+string         )
-     * data description: WampProtocol|ID     |namelength+namebyte        (|argtype+argbyte|argtype+argbyte|argtype+arglength+argbyte)
-     * byte length:      1           |2      |1+n                        (|1+4            |1+8            |1+4+n                    )
-     * 
-     * send message:     WampProtocol|ID     |ClassName,MethodorEventName(|arg1           |arg2           |arg3                     )
-     * data type:        byte        |ushort |byte+string                (|byte+int       |byte+double    |byte+int+string         )
-     * data description: WampProtocol|ID     |namelength+namebyte        (|argtype+argbyte|argtype+argbyte|argtype+arglength+argbyte)
-     * byte length:      1           |2      |1+n                        (|1+4            |1+8            |1+4+n                    )
+    /* This message stores these items:
+     *     +----------------------------------------------------------------------------------------------------------------+
+     *     |    ITEMS    | WampProtocol |   ID   | ClassName | MethodorEventName | arg1(not essential) | ...(not essential) |
+     *     +----------------------------------------------------------------------------------------------------------------+
+     *     |    TYPES    |     byte     | ushort |   string  |      string       |         ***         |        ***         |
+     *     +----------------------------------------------------------------------------------------------------------------+
+     *     |    STRING   |               all items are split by '|' after they were converted to string                     |
+     *     +----------------------------------------------------------------------------------------------------------------+
+     *     | BYTE LENGTH |       1      |    2   |              1+n              |         ***         |        ***         +
+     *     +----------------------------------------------------------------------------------------------------------------+
     */
     class WampMessage
     {
         private readonly byte MAX_NAME_LENGTH = byte.MaxValue; // the byte[] length is no more than 255 in Byte Mode  
         private readonly char[] ITEM_SPLIT_CHAR = { '|' }; // split each items in String Mode, or split class name and method name in Byte Mode 
         private readonly string ITEM_SPLIT_STR = "|"; // split each items in String Mode, or split class name and method name in Byte Mode
-        private readonly char[] ARRAY_SPLIT_CHAR = { ';' }; // split array items in String Mode
-        private readonly string ARRAY_SPLIT_STR = ";"; // split array items in String Mode
+        private readonly char[] ARRAY_SPLIT_CHAR = { ',' }; // split array items in String Mode
+        private readonly string ARRAY_SPLIT_STR = ","; // split array items in String Mode
         private readonly string ARRAY_START_STR = "["; // occupy the first positon in array items in String Mode
         private readonly string ARRAY_END_STR = "]"; // occupy the last positon in array items in String Mode
 
@@ -460,6 +453,10 @@ namespace WampFramework.Common
 
         private void _sendString(WampClient socket)
         {
+            // time diagnose, start
+            Stopwatch timeWatch = new Stopwatch();
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0) timeWatch = Stopwatch.StartNew();
+
             string send_str = (byte)_protocol + ITEM_SPLIT_STR + _id + ITEM_SPLIT_STR + _entity + ITEM_SPLIT_STR + _name;
 
             if (_args != null && _args.Length != 0)
@@ -481,10 +478,38 @@ namespace WampFramework.Common
                 send_str = send_str + ITEM_SPLIT_STR + args_str;
             }
 
-            socket.Send(send_str);
+            // time diagnose, stop
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0)
+            {
+                timeWatch.Stop();
+                if (WampProperties.Logger != null)
+                {
+                    string log = string.Format("constuct a message in string:{0};time:{1}ms", this.ToString(), timeWatch.ElapsedMilliseconds);
+                    WampProperties.Logger.Log(log);
+                }
+            }
+
+            // time diagnose, start
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0) timeWatch = Stopwatch.StartNew();
+            socket.SendAsync(send_str, complete => {
+                // time diagnose, stop
+                if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0)
+                {
+                    timeWatch.Stop();
+                    if (WampProperties.Logger != null)
+                    {
+                        string log = string.Format("send a message in string:{0};time:{1}ms", this.ToString(), timeWatch.ElapsedMilliseconds);
+                        WampProperties.Logger.Log(log);
+                    }
+                }
+            });
         }
         private void _sendByte(WampClient socket)
         {
+            // time diagnose, start
+            Stopwatch timeWatch = new Stopwatch();
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0) timeWatch = Stopwatch.StartNew();
+
             List<byte> ret_byte = new List<byte>
             {
                 // protocol, length is 1
@@ -517,299 +542,330 @@ namespace WampFramework.Common
                 _getBytesbyArgs(_args.ToList(), ref ret_byte);
             }
 
-            socket.Send(ret_byte.ToArray());
+            // time diagnose, stop
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0)
+            {
+                timeWatch.Stop();
+                if (WampProperties.Logger != null)
+                {
+                    string log = string.Format("constuct a message in byte[]:{0};time:{1}ms", this.ToString(), timeWatch.ElapsedMilliseconds);
+                    WampProperties.Logger.Log(log);
+                }
+            }
+
+            // time diagnose, start
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0) timeWatch = Stopwatch.StartNew();
+            socket.SendAsync(ret_byte.ToArray(), complete => {
+                // time diagnose, stop
+                if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0)
+                {
+                    timeWatch.Stop();
+                    if (WampProperties.Logger != null)
+                    {
+                        string log = string.Format("send a message in byte[]:{0};time:{1}ms", this.ToString(), timeWatch.ElapsedMilliseconds);
+                        WampProperties.Logger.Log(log);
+                    }
+                }
+            });
         }
         private bool _getArgsbyBytes(List<byte> msg_bs, ref List<object> args)
         {
             if (msg_bs == null || msg_bs.Count == 0) return true;
 
             object arg_obj = null;
-            WampArgType arg_Type = WampArgType.NULL;
+            WampArgType arg_Type = (WampArgType)msg_bs[0];
             msg_bs.RemoveAt(0);
-            // null 
-            if (arg_Type == WampArgType.NULL)
+            try
             {
-                arg_obj = null;
-            }
-            // string 4+n
-            else if (arg_Type == WampArgType.STRING)
-            {
-                // string length
-                byte[] str_len_bs = new byte[4];
-                msg_bs.CopyTo(0, str_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(str_len_bs, out int str_len))
+                // null 
+                if (arg_Type == WampArgType.NULL)
                 {
-                    // string entity
-                    byte[] str_bs = new byte[str_len];
-                    msg_bs.CopyTo(4, str_bs, 0, str_len);
-                    if (WampValueHelper.ParseString(str_bs, out string arg_str))
+                    arg_obj = null;
+                }
+                // string 4+n
+                else if (arg_Type == WampArgType.STRING)
+                {
+                    // string length
+                    byte[] str_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, str_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(str_len_bs, out int str_len))
                     {
-                        arg_obj = arg_str;
+                        // string entity
+                        byte[] str_bs = new byte[str_len];
+                        msg_bs.CopyTo(4, str_bs, 0, str_len);
+                        if (WampValueHelper.ParseString(str_bs, out string arg_str))
+                        {
+                            arg_obj = arg_str;
+                        }
                     }
+
+                    msg_bs.RemoveRange(0, str_len + 4);
                 }
-
-                msg_bs.RemoveRange(0, str_len + 4);
-            }
-            // byte 1
-            else if (arg_Type == WampArgType.BYTE)
-            {
-                byte arg_byte = msg_bs[0];
-                arg_obj = arg_byte;
-
-                msg_bs.RemoveAt(0);
-
-            }
-            // bool 1
-            else if (arg_Type == WampArgType.BOOL)
-            {
-                bool arg_bool = msg_bs[0] != 0;
-                arg_obj = arg_bool;
-
-                msg_bs.RemoveAt(0);
-            }
-            // ushort 2
-            else if (arg_Type == WampArgType.USHORT)
-            {
-                byte[] ushort_bs = new byte[2];
-                msg_bs.CopyTo(0, ushort_bs, 0, 2);
-                if (WampValueHelper.ParseUshort(ushort_bs, out ushort arg_ushort))
+                // byte 1
+                else if (arg_Type == WampArgType.BYTE)
                 {
-                    arg_obj = arg_ushort;
+                    byte arg_byte = msg_bs[0];
+                    arg_obj = arg_byte;
+
+                    msg_bs.RemoveAt(0);
+
                 }
-
-                msg_bs.RemoveRange(0, 2);
-            }
-            // short 2
-            else if (arg_Type == WampArgType.SHORT)
-            {
-                byte[] short_bs = new byte[2];
-                msg_bs.CopyTo(0, short_bs, 0, 2);
-                if (WampValueHelper.ParseShort(short_bs, out short arg_short))
+                // bool 1
+                else if (arg_Type == WampArgType.BOOL)
                 {
-                    arg_obj = arg_short;
+                    bool arg_bool = msg_bs[0] != 0;
+                    arg_obj = arg_bool;
+
+                    msg_bs.RemoveAt(0);
                 }
-
-                msg_bs.RemoveRange(0, 2);
-            }
-            // int 4
-            else if (arg_Type == WampArgType.INT)
-            {
-                byte[] int_bs = new byte[4];
-                msg_bs.CopyTo(0, int_bs, 0, 4);
-                if (WampValueHelper.ParseInt(int_bs, out int arg_int))
+                // ushort 2
+                else if (arg_Type == WampArgType.USHORT)
                 {
-                    arg_obj = arg_int;
-                }
-
-                msg_bs.RemoveRange(0, 4);
-            }
-            // float 4
-            else if (arg_Type == WampArgType.FLOAT)
-            {
-                byte[] float_bs = new byte[4];
-                msg_bs.CopyTo(0, float_bs, 0, 4);
-                if (WampValueHelper.ParseFloat(float_bs, out float arg_float))
-                {
-                    arg_obj = arg_float;
-                }
-
-                msg_bs.RemoveRange(0, 4);
-            }
-            // double 8
-            else if (arg_Type == WampArgType.DOUBLE)
-            {
-                byte[] double_bs = new byte[8];
-                msg_bs.CopyTo(0, double_bs, 0, 8);
-                if (WampValueHelper.ParseDouble(double_bs, out double arg_double))
-                {
-                    arg_obj = arg_double;
-                }
-
-                msg_bs.RemoveRange(0, 8);
-            }
-            // json 4+n, return as string, need to transfer in other place
-            else if (arg_Type == WampArgType.JSON)
-            {
-                byte[] json_len_bs = new byte[4];
-                msg_bs.CopyTo(0, json_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(json_len_bs, out int json_len))
-                {
-                    byte[] json_bs = new byte[json_len];
-                    msg_bs.CopyTo(4, json_bs, 0, json_len);
-                    if (WampValueHelper.ParseString(json_bs, out string arg_json))
+                    byte[] ushort_bs = new byte[2];
+                    msg_bs.CopyTo(0, ushort_bs, 0, 2);
+                    if (WampValueHelper.ParseUshort(ushort_bs, out ushort arg_ushort))
                     {
-                        arg_obj = arg_json;
+                        arg_obj = arg_ushort;
                     }
-                }
 
-                msg_bs.RemoveRange(0, json_len + 4);
-            }
-            // string array 4+4+n1+4+n2+...
-            else if (arg_Type == WampArgType.STRINGS)
-            {
-                byte[] strs_len_bs = new byte[4];
-                msg_bs.CopyTo(0, strs_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(strs_len_bs, out int strs_len))
+                    msg_bs.RemoveRange(0, 2);
+                }
+                // short 2
+                else if (arg_Type == WampArgType.SHORT)
                 {
-                    byte[] strs_bs = new byte[strs_len];
-                    msg_bs.CopyTo(4, strs_bs, 0, strs_len);
-                    List<string> arg_strs = new List<string>();
-                    if (WampByteModeHelper.ParseStringArray(strs_bs.ToList(), ref arg_strs))
+                    byte[] short_bs = new byte[2];
+                    msg_bs.CopyTo(0, short_bs, 0, 2);
+                    if (WampValueHelper.ParseShort(short_bs, out short arg_short))
                     {
-                        arg_obj = arg_strs.ToArray();
+                        arg_obj = arg_short;
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + strs_len);
-            }
-            // byte array 4+1+1+...
-            else if (arg_Type == WampArgType.BYTES)
-            {
-                byte[] bytes_len_bs = new byte[4];
-                msg_bs.CopyTo(0, bytes_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(bytes_len_bs, out int bytes_len))
+                    msg_bs.RemoveRange(0, 2);
+                }
+                // int 4
+                else if (arg_Type == WampArgType.INT)
                 {
-                    byte[] bs_bs = new byte[bytes_len];
-                    msg_bs.CopyTo(4, bs_bs, 0, bytes_len);
-                    List<byte> arg_bytes = new List<byte>();
-                    if (WampByteModeHelper.ParseByteArray(bs_bs.ToList(), ref arg_bytes))
+                    byte[] int_bs = new byte[4];
+                    msg_bs.CopyTo(0, int_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(int_bs, out int arg_int))
                     {
-                        arg_obj = arg_bytes.ToArray();
+                        arg_obj = arg_int;
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + bytes_len);
-            }
-            // bool array 4+1+1+...
-            else if (arg_Type == WampArgType.BOOLS)
-            {
-                byte[] bools_len_bs = new byte[4];
-                msg_bs.CopyTo(0, bools_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(bools_len_bs, out int bools_len))
+                    msg_bs.RemoveRange(0, 4);
+                }
+                // float 4
+                else if (arg_Type == WampArgType.FLOAT)
                 {
-                    byte[] bools_bs = new byte[bools_len];
-                    msg_bs.CopyTo(4, bools_bs, 0, bools_len);
-                    List<bool> args_bools = new List<bool>();
-                    if (WampByteModeHelper.ParseBoolArray(bools_bs.ToList(), ref args_bools))
+                    byte[] float_bs = new byte[4];
+                    msg_bs.CopyTo(0, float_bs, 0, 4);
+                    if (WampValueHelper.ParseFloat(float_bs, out float arg_float))
                     {
-                        arg_obj = args_bools.ToArray();
+                        arg_obj = arg_float;
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + bools_len);
-            }
-            // ushort array 4+2+2+...
-            else if (arg_Type == WampArgType.USHORTS)
-            {
-                byte[] ushorts_len_bs = new byte[4];
-                msg_bs.CopyTo(0, ushorts_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(ushorts_len_bs, out int ushorts_len))
+                    msg_bs.RemoveRange(0, 4);
+                }
+                // double 8
+                else if (arg_Type == WampArgType.DOUBLE)
                 {
-                    byte[] ushorts_bs = new byte[ushorts_len];
-                    msg_bs.CopyTo(4, ushorts_bs, 0, ushorts_len);
-                    List<ushort> args_ushorts = new List<ushort>();
-                    if (WampByteModeHelper.ParseUshortArray(ushorts_bs.ToList(), ref args_ushorts))
+                    byte[] double_bs = new byte[8];
+                    msg_bs.CopyTo(0, double_bs, 0, 8);
+                    if (WampValueHelper.ParseDouble(double_bs, out double arg_double))
                     {
-                        arg_obj = args_ushorts.ToArray();
+                        arg_obj = arg_double;
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + ushorts_len);
-            }
-            // short array 4+2+2+...
-            else if (arg_Type == WampArgType.SHORTS)
-            {
-                byte[] shorts_len_bs = new byte[4];
-                msg_bs.CopyTo(0, shorts_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(shorts_len_bs, out int shorts_len))
+                    msg_bs.RemoveRange(0, 8);
+                }
+                // json 4+n, return as string, need to transfer in other place
+                else if (arg_Type == WampArgType.JSON)
                 {
-                    byte[] shorts_bs = new byte[shorts_len];
-                    msg_bs.CopyTo(4, shorts_bs, 0, shorts_len);
-                    List<short> args_shorts = new List<short>();
-                    if (WampByteModeHelper.ParseShortArray(shorts_bs.ToList(), ref args_shorts))
+                    byte[] json_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, json_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(json_len_bs, out int json_len))
                     {
-                        arg_obj = args_shorts.ToArray();
+                        byte[] json_bs = new byte[json_len];
+                        msg_bs.CopyTo(4, json_bs, 0, json_len);
+                        if (WampValueHelper.ParseString(json_bs, out string arg_json))
+                        {
+                            arg_obj = arg_json;
+                        }
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + shorts_len);
-            }
-            // int array 4+4+4+...
-            else if (arg_Type == WampArgType.INTS)
-            {
-                byte[] ints_len_bs = new byte[4];
-                msg_bs.CopyTo(0, ints_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(ints_len_bs, out int ints_len))
+                    msg_bs.RemoveRange(0, json_len + 4);
+                }
+                // string array 4+4+n1+4+n2+...
+                else if (arg_Type == WampArgType.STRINGS)
                 {
-                    byte[] ints_bs = new byte[ints_len];
-                    msg_bs.CopyTo(4, ints_bs, 0, ints_len);
-                    List<int> args_ints = new List<int>();
-                    if (WampByteModeHelper.ParseIntArray(ints_bs.ToList(), ref args_ints))
+                    byte[] strs_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, strs_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(strs_len_bs, out int strs_len))
                     {
-                        arg_obj = args_ints.ToArray();
+                        byte[] strs_bs = new byte[strs_len];
+                        msg_bs.CopyTo(4, strs_bs, 0, strs_len);
+                        List<string> arg_strs = new List<string>();
+                        if (WampByteModeHelper.ParseStringArray(strs_bs.ToList(), ref arg_strs))
+                        {
+                            arg_obj = arg_strs.ToArray();
+                        }
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + ints_len);
-            }
-            // float array 4+4+4+...
-            else if (arg_Type == WampArgType.FLOATS)
-            {
-                byte[] floats_len_bs = new byte[4];
-                msg_bs.CopyTo(0, floats_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(floats_len_bs, out int floats_len))
+                    msg_bs.RemoveRange(0, 4 + strs_len);
+                }
+                // byte array 4+1+1+...
+                else if (arg_Type == WampArgType.BYTES)
                 {
-                    byte[] floats_bs = new byte[floats_len];
-                    msg_bs.CopyTo(4, floats_bs, 0, floats_len);
-                    List<float> args_floats = new List<float>();
-                    if (WampByteModeHelper.ParseFloatArray(floats_bs.ToList(), ref args_floats))
+                    byte[] bytes_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, bytes_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(bytes_len_bs, out int bytes_len))
                     {
-                        arg_obj = args_floats.ToArray();
+                        byte[] bs_bs = new byte[bytes_len];
+                        msg_bs.CopyTo(4, bs_bs, 0, bytes_len);
+                        List<byte> arg_bytes = new List<byte>();
+                        if (WampByteModeHelper.ParseByteArray(bs_bs.ToList(), ref arg_bytes))
+                        {
+                            arg_obj = arg_bytes.ToArray();
+                        }
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + floats_len);
-            }
-            // double array 4+8+8+...
-            else if (arg_Type == WampArgType.DOUBLES)
-            {
-                byte[] doubles_len_bs = new byte[4];
-                msg_bs.CopyTo(0, doubles_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(doubles_len_bs, out int doubles_len))
+                    msg_bs.RemoveRange(0, 4 + bytes_len);
+                }
+                // bool array 4+1+1+...
+                else if (arg_Type == WampArgType.BOOLS)
                 {
-                    byte[] doubles_bs = new byte[doubles_len];
-                    msg_bs.CopyTo(4, doubles_bs, 0, doubles_len);
-                    List<double> args_doubles = new List<double>();
-                    if (WampByteModeHelper.ParseDoubleArray(doubles_bs.ToList(), ref args_doubles))
+                    byte[] bools_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, bools_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(bools_len_bs, out int bools_len))
                     {
-                        arg_obj = args_doubles.ToArray();
+                        byte[] bools_bs = new byte[bools_len];
+                        msg_bs.CopyTo(4, bools_bs, 0, bools_len);
+                        List<bool> args_bools = new List<bool>();
+                        if (WampByteModeHelper.ParseBoolArray(bools_bs.ToList(), ref args_bools))
+                        {
+                            arg_obj = args_bools.ToArray();
+                        }
                     }
-                }
 
-                msg_bs.RemoveRange(0, 4 + doubles_len);
-            }
-            // string array 4+4+n1+4+n2+..., return as string[], need to transfer in other place
-            else if (arg_Type == WampArgType.JSONS)
-            {
-                byte[] jsons_len_bs = new byte[4];
-                msg_bs.CopyTo(0, jsons_len_bs, 0, 4);
-                if (WampValueHelper.ParseInt(jsons_len_bs, out int jsons_len))
+                    msg_bs.RemoveRange(0, 4 + bools_len);
+                }
+                // ushort array 4+2+2+...
+                else if (arg_Type == WampArgType.USHORTS)
                 {
-                    byte[] jsons_bs = new byte[jsons_len];
-                    msg_bs.CopyTo(4, jsons_bs, 0, jsons_len);
-                    List<string> arg_jsons = new List<string>();
-                    if (WampByteModeHelper.ParseStringArray(jsons_bs.ToList(), ref arg_jsons))
+                    byte[] ushorts_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, ushorts_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(ushorts_len_bs, out int ushorts_len))
                     {
-                        arg_obj = arg_jsons.ToArray();
+                        byte[] ushorts_bs = new byte[ushorts_len];
+                        msg_bs.CopyTo(4, ushorts_bs, 0, ushorts_len);
+                        List<ushort> args_ushorts = new List<ushort>();
+                        if (WampByteModeHelper.ParseUshortArray(ushorts_bs.ToList(), ref args_ushorts))
+                        {
+                            arg_obj = args_ushorts.ToArray();
+                        }
                     }
+
+                    msg_bs.RemoveRange(0, 4 + ushorts_len);
+                }
+                // short array 4+2+2+...
+                else if (arg_Type == WampArgType.SHORTS)
+                {
+                    byte[] shorts_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, shorts_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(shorts_len_bs, out int shorts_len))
+                    {
+                        byte[] shorts_bs = new byte[shorts_len];
+                        msg_bs.CopyTo(4, shorts_bs, 0, shorts_len);
+                        List<short> args_shorts = new List<short>();
+                        if (WampByteModeHelper.ParseShortArray(shorts_bs.ToList(), ref args_shorts))
+                        {
+                            arg_obj = args_shorts.ToArray();
+                        }
+                    }
+
+                    msg_bs.RemoveRange(0, 4 + shorts_len);
+                }
+                // int array 4+4+4+...
+                else if (arg_Type == WampArgType.INTS)
+                {
+                    byte[] ints_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, ints_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(ints_len_bs, out int ints_len))
+                    {
+                        byte[] ints_bs = new byte[ints_len];
+                        msg_bs.CopyTo(4, ints_bs, 0, ints_len);
+                        List<int> args_ints = new List<int>();
+                        if (WampByteModeHelper.ParseIntArray(ints_bs.ToList(), ref args_ints))
+                        {
+                            arg_obj = args_ints.ToArray();
+                        }
+                    }
+
+                    msg_bs.RemoveRange(0, 4 + ints_len);
+                }
+                // float array 4+4+4+...
+                else if (arg_Type == WampArgType.FLOATS)
+                {
+                    byte[] floats_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, floats_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(floats_len_bs, out int floats_len))
+                    {
+                        byte[] floats_bs = new byte[floats_len];
+                        msg_bs.CopyTo(4, floats_bs, 0, floats_len);
+                        List<float> args_floats = new List<float>();
+                        if (WampByteModeHelper.ParseFloatArray(floats_bs.ToList(), ref args_floats))
+                        {
+                            arg_obj = args_floats.ToArray();
+                        }
+                    }
+
+                    msg_bs.RemoveRange(0, 4 + floats_len);
+                }
+                // double array 4+8+8+...
+                else if (arg_Type == WampArgType.DOUBLES)
+                {
+                    byte[] doubles_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, doubles_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(doubles_len_bs, out int doubles_len))
+                    {
+                        byte[] doubles_bs = new byte[doubles_len];
+                        msg_bs.CopyTo(4, doubles_bs, 0, doubles_len);
+                        List<double> args_doubles = new List<double>();
+                        if (WampByteModeHelper.ParseDoubleArray(doubles_bs.ToList(), ref args_doubles))
+                        {
+                            arg_obj = args_doubles.ToArray();
+                        }
+                    }
+
+                    msg_bs.RemoveRange(0, 4 + doubles_len);
+                }
+                // string array 4+4+n1+4+n2+..., return as string[], need to transfer in other place
+                else if (arg_Type == WampArgType.JSONS)
+                {
+                    byte[] jsons_len_bs = new byte[4];
+                    msg_bs.CopyTo(0, jsons_len_bs, 0, 4);
+                    if (WampValueHelper.ParseInt(jsons_len_bs, out int jsons_len))
+                    {
+                        byte[] jsons_bs = new byte[jsons_len];
+                        msg_bs.CopyTo(4, jsons_bs, 0, jsons_len);
+                        List<string> arg_jsons = new List<string>();
+                        if (WampByteModeHelper.ParseStringArray(jsons_bs.ToList(), ref arg_jsons))
+                        {
+                            arg_obj = arg_jsons.ToArray();
+                        }
+                    }
+
+                    msg_bs.RemoveRange(0, 4 + jsons_len);
                 }
 
-                msg_bs.RemoveRange(0, 4 + jsons_len);
+                args.Add(arg_obj);
+
+                return _getArgsbyBytes(msg_bs, ref args);
             }
-
-            args.Add(arg_obj);
-
-            return _getArgsbyBytes(msg_bs, ref args);
+            catch
+            {
+                return false;
+            }
         }
         private bool _getBytesbyArgs(List<object> args, ref List<byte> msg_bs)
         {
@@ -881,9 +937,9 @@ namespace WampFramework.Common
                         msg_bs.AddRange(arg_bs);
                     }
                 }
-                else if (typeof(IWampJsonData).IsAssignableFrom(arg.GetType()))
+                else if (typeof(IWampJson).IsAssignableFrom(arg.GetType()))
                 {
-                    if (WampValueHelper.ParseBytes((IWampJsonData)arg, out byte[] arg_bs, WampProperties.StrEncoding))
+                    if (WampValueHelper.ParseBytes((IWampJson)arg, out byte[] arg_bs, WampProperties.StrEncoding))
                     {
                         msg_bs.Add((byte)(WampArgType.JSON));
                         if (WampValueHelper.ParseBytes(arg_bs.Length, out byte[] arg_length))
@@ -933,10 +989,10 @@ namespace WampFramework.Common
                     msg_bs.Add((byte)(WampArgType.DOUBLES));
                     msg_bs.AddRange(WampByteModeHelper.GetBytes(((double[])arg).ToList()));
                 }
-                else if (typeof(IWampJsonData[]).IsAssignableFrom(arg.GetType()))
+                else if (typeof(IWampJson[]).IsAssignableFrom(arg.GetType()))
                 {
                     msg_bs.Add((byte)(WampArgType.JSONS));
-                    msg_bs.AddRange(WampByteModeHelper.GetBytes(((IWampJsonData[])arg).ToList()));
+                    msg_bs.AddRange(WampByteModeHelper.GetBytes(((IWampJson[])arg).ToList()));
                 }
             }
             return true;
@@ -972,11 +1028,11 @@ namespace WampFramework.Common
                     string array_str = ARRAY_START_STR;
 
                     Array obj_array = (Array)arg;
-                    if (typeof(IWampJsonData[]).IsAssignableFrom(arg.GetType()))
+                    if (typeof(IWampJson[]).IsAssignableFrom(arg.GetType()))
                     {
                         foreach (object obj in obj_array)
                         {
-                            array_str += ((IWampJsonData)obj).ToJson() + ARRAY_SPLIT_STR;
+                            array_str += ((IWampJson)obj).ToJson() + ARRAY_SPLIT_STR;
                         }
                     }
                     else
@@ -998,9 +1054,9 @@ namespace WampFramework.Common
                 }
                 else
                 {
-                    if (typeof(IWampJsonData).IsAssignableFrom(arg.GetType()))
+                    if (typeof(IWampJson).IsAssignableFrom(arg.GetType()))
                     {
-                        msg_strs.Add(((IWampJsonData)arg).ToJson());
+                        msg_strs.Add(((IWampJson)arg).ToJson());
                     }
                     else
                     {
@@ -1020,6 +1076,10 @@ namespace WampFramework.Common
 
         internal bool Construct(object message)
         {
+            // time diagnose, start
+            Stopwatch timeWatch = new Stopwatch();
+            if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0) timeWatch = Stopwatch.StartNew();
+
             if (message.GetType() == typeof(string))
             {
                 string mes_str = (string)message;
@@ -1046,6 +1106,17 @@ namespace WampFramework.Common
                     List<object> args = new List<object>();
                     if (!_getArgsbyStrings(args_objs, ref args)) return false;
                     _args = args.ToArray();
+
+                    // time diagnose, stop
+                    if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0)
+                    {
+                        timeWatch.Stop();
+                        if (WampProperties.Logger != null)
+                        {
+                            string log = string.Format("constuct a message in string:{0};time:{1}ms", this.ToString(), timeWatch.ElapsedMilliseconds);
+                            WampProperties.Logger.Log(log);
+                        } 
+                    } 
                 }
                 catch (Exception)
                 {
@@ -1082,6 +1153,17 @@ namespace WampFramework.Common
                     List<object> args = new List<object>();
                     if (!_getArgsbyBytes(msg_bs, ref args)) return false;
                     _args = args.ToArray();
+
+                    // time diagnose, stop
+                    if ((WampProperties.LoggerOptions & LogOption.TIME_DIAG) > 0)
+                    {
+                        timeWatch.Stop();
+                        if (WampProperties.Logger != null)
+                        {
+                            string log = string.Format("constuct a message in byte[]:{0};time:{1}ms", this.ToString(), timeWatch.ElapsedMilliseconds);
+                            WampProperties.Logger.Log(log);
+                        }
+                    }
                 }
                 catch (Exception)
                 {
@@ -1115,11 +1197,11 @@ namespace WampFramework.Common
             }
 
             // log, when send a message back
-            if (WampProperties.Logger != null && WampProperties.LogSend)
+            if (WampProperties.Logger != null && (WampProperties.LoggerOptions & LogOption.SENT)>0)
             {
-                string log_str = string.Format("Send a message to {0}, is {1}",
+                string log = string.Format("Send a message to {0}, is {1}",
                     socket.ToString(), this.ToString());
-                WampProperties.Logger.Log(log_str);
+                WampProperties.Logger.Log(log);
             }
         }
         internal void SendErro(WampClient socket, object message)
@@ -1142,9 +1224,9 @@ namespace WampFramework.Common
             // log, when send an erro message back
             if (WampProperties.Logger != null)
             {
-                string log_str = string.Format("Send an erro message from {0}, is {1}|{2}",
+                string log = string.Format("Send an erro message from {0}, is {1}|{2}",
                     socket.ToString(), (byte)WampProtocolHead.ERROR, message);
-                WampProperties.Logger.Log(log_str);
+                WampProperties.Logger.Log(log);
             }
         }
 
@@ -1155,18 +1237,7 @@ namespace WampFramework.Common
             {
                 foreach (object arg in _args)
                 {
-                    if (arg == null)
-                    {
-                        args_str += ITEM_SPLIT_STR;
-                    }
-                    else if (typeof(IWampJsonData).IsAssignableFrom(arg.GetType()))
-                    {
-                        args_str += ((IWampJsonData)arg).ToJson() + ITEM_SPLIT_STR;
-                    }
-                    else
-                    {
-                        args_str += arg.ToString() + ITEM_SPLIT_STR;
-                    }
+                    args_str +=WampProperties.GetArgType(arg) + ARRAY_SPLIT_STR;
                 }
 
                 if (!string.IsNullOrEmpty(args_str))

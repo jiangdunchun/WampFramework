@@ -12,15 +12,18 @@ namespace WampFramework.API
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Class, Inherited = true)]
     public class WampClassAttribute : Attribute
     {
-        private bool _export;
         /// <summary>
         /// export or not
         /// </summary>
-        internal bool Export { get { return _export; } }
+        internal readonly bool Export;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="export">export or not</param>
         public WampClassAttribute(bool export)
         {
-            _export = export;
+            Export = export;
         }
     }
 
@@ -30,70 +33,107 @@ namespace WampFramework.API
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method, Inherited = true)]
     public class WampMethodAttribute : Attribute
     {
-        private bool _export;
-        private bool _threadSecurity;
         /// <summary>
         /// export or not
         /// </summary>
-        internal bool Export { get { return _export; } }
+        internal readonly bool Export;
         /// <summary>
-        /// thread security or not
+        /// if this method could be invoked in any thread or not
         /// </summary>
-        internal bool ThreadSecurity { get { return _threadSecurity; } }
+        internal readonly bool ThreadSecurity;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="export">export or not</param>
+        /// <param name="threadScurity">if this method could be invoked in any thread or not</param>
         public WampMethodAttribute(bool export, bool threadScurity = false)
         {
-            _export = export;
-            _threadSecurity = threadScurity;
+            Export = export;
+            ThreadSecurity = threadScurity;
         }
     }
 
     /// <summary>
-    /// the attribute of wamp event
+    /// the attribute of wamp event, only support WampEvent now
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Event, Inherited = true)]
     public class WampEventAttribute : Attribute
     {
-        private bool _export;
-        private List<WampArgument> _args = new List<WampArgument>();
         /// <summary>
         /// export or not
         /// </summary>
-        internal bool Export { get { return _export; } }
+        internal readonly bool Export;
         /// <summary>
         /// all arguments need to be add in this list, in order to export to api file
         /// </summary>
-        internal List<WampArgument> Args { get { return _args; } }
+        internal readonly List<WampArgument> Args = new List<WampArgument>();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="export">export or not</param>
+        /// <param name="a1Type">the type of arg_1</param>
+        /// <param name="a1Name">the name of arg_1</param>
         public WampEventAttribute(bool export, Type a1Type, string a1Name)
         {
-            _export = export;
+            Export = export;
 
-            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name});
+            Args.Add(new WampArgument() { Type = a1Type, Name = a1Name});
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="export">export or not</param>
+        /// <param name="a1Type">the type of arg_1</param>
+        /// <param name="a1Name">the name of arg_1</param>
+        /// <param name="a2Type">the type of arg_2</param>
+        /// <param name="a2Name">the name of arg_2</param>
         public WampEventAttribute(bool export, Type a1Type, string a1Name, Type a2Type, string a2Name)
         {
-            _export = export;
+            Export = export;
 
-            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
-            _args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
+            Args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
+            Args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="export">export or not</param>
+        /// <param name="a1Type">the type of arg_1</param>
+        /// <param name="a1Name">the name of arg_1</param>
+        /// <param name="a2Type">the type of arg_2</param>
+        /// <param name="a2Name">the name of arg_2</param>
+        /// <param name="a3Type">the type of arg_3</param>
+        /// <param name="a3Name">the name of arg_3</param>
         public WampEventAttribute(bool export, Type a1Type, string a1Name, Type a2Type, string a2Name, Type a3Type, string a3Name)
         {
-            _export = export;
+            Export = export;
 
-            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
-            _args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
-            _args.Add(new WampArgument() { Type = a3Type, Name = a3Name });
+            Args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
+            Args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
+            Args.Add(new WampArgument() { Type = a3Type, Name = a3Name });
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="export">export or not</param>
+        /// <param name="a1Type">the type of arg_1</param>
+        /// <param name="a1Name">the name of arg_1</param>
+        /// <param name="a2Type">the type of arg_2</param>
+        /// <param name="a2Name">the name of arg_2</param>
+        /// <param name="a3Type">the type of arg_3</param>
+        /// <param name="a3Name">the name of arg_3</param>
+        /// <param name="a4Type">the type of arg_4</param>
+        /// <param name="a4Name">the name of arg_4</param>
         public WampEventAttribute(bool export, Type a1Type, string a1Name, Type a2Type, string a2Name, Type a3Type, string a3Name, Type a4Type, string a4Name)
         {
-            _export = export;
+            Export = export;
 
-            _args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
-            _args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
-            _args.Add(new WampArgument() { Type = a3Type, Name = a3Name });
-            _args.Add(new WampArgument() { Type = a4Type, Name = a4Name });
+            Args.Add(new WampArgument() { Type = a1Type, Name = a1Name });
+            Args.Add(new WampArgument() { Type = a2Type, Name = a2Name });
+            Args.Add(new WampArgument() { Type = a3Type, Name = a3Name });
+            Args.Add(new WampArgument() { Type = a4Type, Name = a4Name });
         }
     }
 

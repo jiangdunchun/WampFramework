@@ -20,16 +20,13 @@ namespace WampConsoleTest
     {
         static void Main(string[] args)
         {
-            WampExpoterTest test = new WampExpoterTest();
-
-            WampRouter.Instance.Register(test);
-
-            //WampRouter.Instance.Context.IsLittleEndian = true;
-            WampRouter.Instance.Export("C:/Users/JDC/Desktop");
             WampRouter.Instance.SetLogger(new ConsoleLogger());
 
-            //WampRouter.Instance.ClientConnected = (msg) => { Console.WriteLine("********{0}", msg); };
-            //WampRouter.Instance.ClientBroken = (msg) => { Console.WriteLine("********{0}", msg); };
+            WampExpoterTest test = new WampExpoterTest();
+
+            WampRouter.Instance.Regist(test);
+            WampRouter.Instance.ExportTo("C:/Users/JDC/Desktop");
+            WampRouter.Instance.Context.IsByteMode = false;
 
             WampHost host = new WampHost(2223, "wamp");
             host.Start();

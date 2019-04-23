@@ -8,6 +8,7 @@ using WampFramework.API;
 
 namespace WampFramework.Common
 {
+    //@TODO: improve the efficience
     static class WampValueHelper
     {
         static private Byte[] _reverse(Byte[] data)
@@ -16,7 +17,7 @@ namespace WampFramework.Common
             return data;
         }
 
-        // tranfer different type to byte[]
+        // convert different type to byte[]
         static internal bool ParseBytes(short value, out byte[] ret)
         {
             ret = BitConverter.GetBytes(value);
@@ -83,7 +84,7 @@ namespace WampFramework.Common
 
             return true;
         }
-        static internal bool ParseBytes(IWampJsonData value, out byte[] ret, Encoding encoding)
+        static internal bool ParseBytes(IWampJson value, out byte[] ret, Encoding encoding)
         {
             string str_value = value.ToJson();
 
@@ -97,7 +98,7 @@ namespace WampFramework.Common
             return true;
         }
 
-        // tranfer byte[] to different type
+        // convert byte[] to different type
         static internal bool ParseShort(byte[] data, out short ret)
         {
             if (WampProperties.NeedReversed)
@@ -164,7 +165,7 @@ namespace WampFramework.Common
 
             return true;
         }
-        static internal bool ParseJson(byte[] data, Type jsonType, out IWampJsonData ret)
+        static internal bool ParseJson(byte[] data, Type jsonType, out IWampJson ret)
         {
             if (WampProperties.NeedReversed)
             {
@@ -173,7 +174,7 @@ namespace WampFramework.Common
 
             string str_ret = BitConverter.ToString(data, 0);
 
-            if (ParseJson(str_ret, jsonType, out IWampJsonData json_ret))
+            if (ParseJson(str_ret, jsonType, out IWampJson json_ret))
             {
                 ret = json_ret;
                 return true;
@@ -185,7 +186,7 @@ namespace WampFramework.Common
             }
         }
 
-        // tranfer string to different type
+        // convert string to different type
         static internal bool ParseByte(string value, out byte ret)
         {
             if (byte.TryParse(value, out ret))
@@ -255,10 +256,10 @@ namespace WampFramework.Common
 
             return false;
         }
-        static internal bool ParseJson(string data, Type jsonType, out IWampJsonData ret)
+        static internal bool ParseJson(string data, Type jsonType, out IWampJson ret)
         {
             ConstructorInfo cst_inf = jsonType.GetConstructor(System.Type.EmptyTypes);
-            IWampJsonData json_instance = (IWampJsonData)(cst_inf.Invoke(null));
+            IWampJson json_instance = (IWampJson)(cst_inf.Invoke(null));
             if (json_instance != null)
             {
                 if (json_instance.Construct(data))
@@ -359,9 +360,9 @@ namespace WampFramework.Common
                         return null;
                     }
                 }
-                else if (typeof(IWampJsonData).IsAssignableFrom(info.ParameterType))
+                else if (typeof(IWampJson).IsAssignableFrom(info.ParameterType))
                 {
-                    if (ParseJson(obj_str, info.ParameterType, out IWampJsonData ret))
+                    if (ParseJson(obj_str, info.ParameterType, out IWampJson ret))
                     {
                         return ret;
                     }
@@ -487,12 +488,12 @@ namespace WampFramework.Common
                     }
                     return double_ret.ToArray();
                 }
-                else if (typeof(IWampJsonData[]).IsAssignableFrom(info.ParameterType))
+                else if (typeof(IWampJson[]).IsAssignableFrom(info.ParameterType))
                 {
-                    List<IWampJsonData> json_ret = new List<IWampJsonData>();
+                    List<IWampJson> json_ret = new List<IWampJson>();
                     foreach (string obj_str in obj_strs)
                     {
-                        if (ParseJson(obj_str, info.ParameterType, out IWampJsonData ret))
+                        if (ParseJson(obj_str, info.ParameterType, out IWampJson ret))
                         {
                             json_ret.Add(ret);
                         }

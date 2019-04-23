@@ -8,21 +8,18 @@ using WampFramework.API;
 
 namespace LocalAssemble
 {
-    [WampClassAttribute(true)]
+    [WampClass(true)]
     public class ClassTest
     {
         int i = 0;
         private System.Timers.Timer _monitorTimer = null;
 
-        private void sendWSTimerElapsed(object source, ElapsedEventArgs e)
+        private void _sendWSTimerElapsed(object source, ElapsedEventArgs e)
         {
             I++;
 
             if (ValuedChanged != null)
             {
-                EventArgs es = new EventArgs();
-
-                //ValuedChanged(this, I);
                 object[] ret = { I };
                 ValuedChanged("ValuedChanged", ret);
             }
@@ -31,7 +28,7 @@ namespace LocalAssemble
         public ClassTest()
         {
             _monitorTimer = new System.Timers.Timer(10 * 1000);
-            _monitorTimer.Elapsed += sendWSTimerElapsed;
+            _monitorTimer.Elapsed += _sendWSTimerElapsed;
             _monitorTimer.AutoReset = true;
             _monitorTimer.Start();
         }
@@ -66,6 +63,36 @@ namespace LocalAssemble
             Thread.Sleep(20 * 1000);
             return I;
         }
+        [WampMethodAttribute(true)]
+        public void SetArray(int[] array)
+        {
+            //Thread.Sleep(20 * 1000);
+            //return I;
+        }
+
+
+        //[WampMethod(true)]
+        //public string GetStringE()
+        //{
+        //    return "english";
+        //}
+
+        //[WampMethod(true)]
+        //public string GetStringC()
+        //{
+        //    return "中文";
+        //}
+
+        //[WampMethod(true)]
+        //public string[] GetStringCE()
+        //{
+        //    List<string> ss = new List<string>();
+        //    ss.Add("中文english");
+        //    ss.Add("english中文");
+        //    ss.Add("english");
+        //    ss.Add("中文");
+        //    return ss.ToArray();
+        //}
     }
 
     public class WampExpoterTest : IWampLocalExporter

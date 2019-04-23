@@ -7,13 +7,26 @@ using System.Threading.Tasks;
 namespace WampFramework.API
 {
     /// <summary>
-    /// log standard of wamp message
+    /// log options of wamp message
     /// </summary>
-    public enum LogStandard
+    public enum LogOption
     {
-        RECEIVED_ONLY,
-        SEND_ONLY,
-        ALL
+        /// <summary>
+        /// default mode, only log some essential message
+        /// </summary>
+        NONE = 0,
+        /// <summary>
+        /// log received message 
+        /// </summary>
+        RECEIVED = 1 << 0,
+        /// <summary>
+        /// log sent message
+        /// </summary>
+        SENT = 1 << 1,
+        /// <summary>
+        /// log time diagnose
+        /// </summary>
+        TIME_DIAG = 1 << 2
     }
 
     /// <summary>
@@ -21,6 +34,10 @@ namespace WampFramework.API
     /// </summary>
     public interface IWampLogger
     {
+        /// <summary>
+        /// Log message in wamp
+        /// </summary>
+        /// <param name="log">log content</param>
         void Log(string log);
     }
 }

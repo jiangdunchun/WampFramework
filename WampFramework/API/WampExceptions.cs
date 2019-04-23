@@ -7,22 +7,22 @@ using System.Threading.Tasks;
 namespace WampFramework.API
 {
     /// <summary>
-    /// throw some exceptions happened when wamp message is constructed or sent
+    /// exceptions happened when wamp message is constructed or sent
     /// </summary>
     [Serializable]
     public class WampMessageException : ApplicationException
     {
-        public WampMessageException(string message)
+        internal WampMessageException(string message)
             : base(message) { }
     }
 
     /// <summary>
-    /// throw some exceptions happened when wamp host is started
+    /// exceptions happened when wamp host is started
     /// </summary>
     [Serializable]
     public class WampHostException : ApplicationException
     {
-        public WampHostException(string message)
+        internal WampHostException(string message)
             : base(message) { }
     }
 }

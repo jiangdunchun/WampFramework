@@ -1,60 +1,45 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WampFramework.Common;
-using WampFramework.Interfaces;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
 namespace WampFramework.Router
 {
+    /// <summary>
+    /// websocket host based on WebSocketSharp
+    /// </summary>
     public class WampHost
     {
+        /// <summary>
+        /// constructor of WampHost
+        /// </summary>
+        /// <param name="port">port of this host</param>
+        /// <param name="router">router of this host</param>
         public WampHost(int port, string router)
         {
             WampClient.ClientConnected = (socket) =>
             {
-                if (ClientConnected != null)
-                {
-                    ClientConnected(socket);
-                }
-                if (UserConnected != null)
-                {
-                    UserConnected(new WampUser(socket));
-                }
+                ClientConnected?.Invoke(socket);
+                UserConnected?.Invoke(new WampUser(socket));
             };
             WampClient.ClientBroken = (socket) =>
             {
-                if (ClientBroken != null)
-                {
-                    ClientBroken(socket);
-                }
-                if (UserBroken != null)
-                {
-                    UserBroken(new WampUser(socket));
-                }
+                ClientBroken?.Invoke(socket);
+                UserBroken?.Invoke(new WampUser(socket));
             };
             WampClient.MessageReceived = (socket, msg) =>
             {
-                if (MessageReceived != null)
-                {
-                    MessageReceived(socket, msg);
-                }
+                MessageReceived?.Invoke(socket, msg);
             };
 
             _server = new WebSocketServer(port);
             _server.AddWebSocketService<WampClient> (string.Format("/{0}", router));
 
-            _port = port;
-            _router = router;
+            Port = port;
+            Router = router;
+            IsOpen = false;
         }
 
-        private int _port = -1;
-        private string _router = string.Empty;
-        private bool _isOpened = false;
         private WebSocketServer _server = null;
 
         internal Action<WampClient> ClientConnected;
@@ -73,15 +58,15 @@ namespace WampFramework.Router
         /// <summary>
         /// Port of this wamp host
         /// </summary>
-        public int Port { get { return _port; } }
+        public int Port { protected set; get; }
         /// <summary>
         /// router of this wamp host, no "/"
         /// </summary>
-        public string Router { get { return _router; } }
+        public string Router { protected set; get; }
         /// <summary>
         /// is this wamp host opening
         /// </summary>
-        public bool IsOpen { get { return _isOpened; } }
+        public bool IsOpen { protected set; get; }
 
         /// <summary>
         /// start this wamp host, and listen to the client
@@ -94,7 +79,7 @@ namespace WampFramework.Router
                 if (_server.IsListening)
                 {
                     // is listening
-                    _isOpened = true;
+                    IsOpen = true;
                 }
             }
         }
@@ -106,12 +91,15 @@ namespace WampFramework.Router
             if (_server != null)
             {
                 _server.Stop();
-                _isOpened = false;
+                IsOpen = false;
                 _server = null;
             }
         }
     }
 
+    /// <summary>
+    /// websocket client based on WebSocketSharp
+    /// </summary>
     public class WampUser
     {
         internal WampUser(WampClient client)
@@ -121,7 +109,13 @@ namespace WampFramework.Router
 
         private WampClient _client;
 
+        /// <summary>
+        /// IP of the Wamp User
+        /// </summary>
         public string IP { get { return _client.IP; } }
+        /// <summary>
+        /// Port of the Wamp User
+        /// </summary>
         public int Port { get { return _client.Port; } }
     }
 
@@ -129,17 +123,14 @@ namespace WampFramework.Router
     {
         protected override void OnOpen()
         {
-            if (ClientConnected != null)
-            {
-                ClientConnected(this);
-            }
+            IP = base.Context.UserEndPoint.Address.ToString();
+            Port = base.Context.UserEndPoint.Port;
+
+            ClientConnected?.Invoke(this);
         }
         protected override void OnClose(CloseEventArgs e)
         {
-            if (ClientBroken != null)
-            {
-                ClientBroken(this);
-            }
+            ClientBroken?.Invoke(this);
         }
         protected override void OnMessage(MessageEventArgs e)
         {
@@ -163,8 +154,8 @@ namespace WampFramework.Router
         static public Action<WampClient> ClientBroken;
         static public Action<WampClient, object> MessageReceived;
 
-        public string IP { get { return base.Context.UserEndPoint.Address.ToString(); } }
-        public int Port { get { return base.Context.UserEndPoint.Port; } }
+        public string IP { protected set; get; }
+        public int Port { protected set; get; }
 
         public new void Send(string message)
         {
@@ -173,6 +164,22 @@ namespace WampFramework.Router
         public new void Send(byte[] message)
         {
             base.Send(message);
+        }
+        public new void Send(FileInfo file)
+        {
+            base.Send(file);
+        }
+        public new void SendAsync(string message, Action<bool> complete)
+        {
+            base.SendAsync(message, complete);
+        }
+        public new void SendAsync(byte[] message, Action<bool> complete)
+        {
+            base.SendAsync(message, complete);
+        }
+        public new void SendAsync(FileInfo file, Action<bool> complete)
+        {
+            base.SendAsync(file, complete);
         }
         public override string ToString()
         {

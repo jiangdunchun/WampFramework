@@ -10,9 +10,11 @@ using WampFramework.Interfaces;
 
 namespace WampFramework.Router
 {
+    // resolve RPC(Remote Procedure Call) message
     class WampDealer
     {
         internal static readonly WampDealer Instance = new WampDealer();
+        private WampDealer() { }
 
         private Dictionary<ushort, WampClient> _methods = new Dictionary<ushort, WampClient>();
 
@@ -90,8 +92,10 @@ namespace WampFramework.Router
         }
         internal void RemoveSocket(WampClient socket)
         {
-            foreach (ushort id in _methods.Keys)
+            for (int i = _methods.Keys.Count; i > 0; i--)
             {
+                ushort id = _methods.Keys.ElementAt(i-1);
+
                 if (_methods[id] == socket)
                 {
                     _methods.Remove(id);
